@@ -1,0 +1,29 @@
+name: Lint and Typecheck
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run markdown lint
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: .
+
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: infra/docker/Dockerfile
+          ignore: DL3008,DL3009

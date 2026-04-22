@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ironclad-postgres
+    environment:
+      POSTGRES_USER: ironclad
+      POSTGRES_PASSWORD: ironclad_dev
+      POSTGRES_DB: ironclad
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ironclad"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Uncomment services as they're scaffolded:
+  # gate-go:
+  #   build:
+  #     context: ../../services/gate-go
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     DATABASE_URL: postgres://ironclad:ironclad_dev@postgres:5432/ironclad
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # semantic-python:
+  #   build:
+  #     context: ../../services/semantic-python
+  #   ports:
+  #     - "8082:8082"
+  #   environment:
+  #     DATABASE_URL: postgres://ironclad:ironclad_dev@postgres:5432/ironclad
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # scoring-python:
+  #   build:
+  #     context: ../../services/scoring-python
+  #   ports:
+  #     - "8083:8083"
+  #   environment:
+  #     DATABASE_URL: postgres://ironclad:ironclad_dev@postgres:5432/ironclad
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  pgdata:
