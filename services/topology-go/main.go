@@ -1,4 +1,3 @@
-package topologygo
 package main
 
 import (

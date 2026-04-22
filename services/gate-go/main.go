@@ -1,4 +1,3 @@
-package gatego
 package main
 
 import (
