@@ -12,46 +12,89 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ../postgres/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ironclad"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Uncomment services as they're scaffolded:
-  # gate-go:
-  #   build:
-  #     context: ../../services/gate-go
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     DATABASE_URL: postgres://ironclad:ironclad_dev@postgres:5432/ironclad
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+  topology-go:
+    build:
+      context: ../../services/topology-go
+      dockerfile: Dockerfile
+    container_name: ironclad-topology
+    ports:
+      - "8081:8081"
+    environment:
+      TOPOLOGY_PORT: "8081"
+      GIN_MODE: release
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # semantic-python:
-  #   build:
-  #     context: ../../services/semantic-python
-  #   ports:
-  #     - "8082:8082"
-  #   environment:
-  #     DATABASE_URL: postgres://ironclad:ironclad_dev@postgres:5432/ironclad
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+  scoring-python:
+    build:
+      context: ../../services/scoring-python
+      dockerfile: Dockerfile
+    container_name: ironclad-scoring
+    ports:
+      - "8083:8083"
+    environment:
+      SCORING_PORT: "8083"
+      DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # scoring-python:
-  #   build:
-  #     context: ../../services/scoring-python
-  #   ports:
-  #     - "8083:8083"
-  #   environment:
-  #     DATABASE_URL: postgres://ironclad:ironclad_dev@postgres:5432/ironclad
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+  semantic-python:
+    build:
+      context: ../../services/semantic-python
+      dockerfile: Dockerfile
+    container_name: ironclad-semantic
+    ports:
+      - "8082:8082"
+    environment:
+      SEMANTIC_PORT: "8082"
+      DEBUG: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gate-go:
+    build:
+      context: ../../services/gate-go
+      dockerfile: Dockerfile
+    container_name: ironclad-gate
+    ports:
+      - "8080:8080"
+    environment:
+      GATE_PORT: "8080"
+      GIN_MODE: release
+      TOPOLOGY_URL: "http://topology-go:8081"
+      SCORING_URL: "http://scoring-python:8083"
+      DATABASE_URL: "postgres://ironclad:ironclad_dev@postgres:5432/ironclad"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      topology-go:
+        condition: service_healthy
+      scoring-python:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:
