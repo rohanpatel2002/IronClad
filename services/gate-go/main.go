@@ -4,50 +4,86 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
 func main() {
-	// Load environment variables
+	// Load environment variables from .env if present
 	_ = godotenv.Load()
 
-	// Initialize Gin router
-	router := gin.Default()
+	topologyURL := os.Getenv("TOPOLOGY_URL")
+	if topologyURL == "" {
+		topologyURL = "http://localhost:8081"
+	}
 
-	// Health check endpoint
+	scoringURL := os.Getenv("SCORING_URL")
+	if scoringURL == "" {
+		scoringURL = "http://localhost:8083"
+	}
+
+	// Wire dependencies
+	topologyClient := clients.NewTopologyClient(topologyURL)
+	scoringClient := clients.NewScoringClient(scoringURL)
+	deployRepo := services.NewNoopDeploymentRepository()
+	riskRepo := services.NewNoopRiskScoreRepository()
+
+	decisionSvc := services.NewDecisionService(topologyClient, scoringClient, deployRepo, riskRepo)
+	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
+
+	// Configure Gin
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.DebugMode)
+	}
+
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(requestLogger())
+
+	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status": "healthy",
-			"service": "gate-go",
+			"status":    "healthy",
+			"service":   "gate-go",
+			"timestamp": time.Now().UTC(),
+			"version":   "0.1.0",
 		})
 	})
 
-	// Stub endpoint for deployment decisions
-	router.POST("/api/v1/decision", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"decision": "PENDING",
-			"message": "Decision engine not yet implemented",
-		})
-	})
-
-	// Get deployment decision details
-	router.GET("/api/v1/decision/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		c.JSON(200, gin.H{
-			"id": id,
-			"status": "pending",
-		})
-	})
+	// API routes
+	v1 := router.Group("/api/v1")
+	decisionHandler.RegisterRoutes(v1)
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	fmt.Printf("Gate service starting on port %s\n", port)
+	fmt.Printf("🚀 IRONCLAD Gate service starting on port %s\n", port)
+	fmt.Printf("   Topology: %s\n", topologyURL)
+	fmt.Printf("   Scoring:  %s\n", scoringURL)
+
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
+	}
+}
+
+// requestLogger returns a Gin middleware that logs each request with timing
+func requestLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		latency := time.Since(start)
+		log.Printf("[GATE] %s %s %d %s",
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Writer.Status(),
+			latency,
+		)
 	}
 }
