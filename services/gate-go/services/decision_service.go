@@ -12,7 +12,7 @@ import (
 // DecisionService handles the core decision-making logic
 type DecisionService struct {
 	topologyClient     TopologyClient
-	semanticClient     *clients.SemanticClient
+	semanticClient     SemanticClient
 	scoringClient      ScoringClient
 	deploymentRepo     DeploymentRepository
 	riskScoreRepo      RiskScoreRepository
@@ -26,6 +26,11 @@ type TopologyClient interface {
 // ScoringClient interface for risk scoring
 type ScoringClient interface {
 	ScoreDeployment(ctx context.Context, req *ScoringRequest) (*ScoringResponse, error)
+}
+
+// SemanticClient interface for intent classification
+type SemanticClient interface {
+	ClassifyIntent(ctx context.Context, req *IntentRequest) (*IntentResponse, error)
 }
 
 // DeploymentRepository persists deployment records
@@ -59,10 +64,26 @@ type ScoringResponse struct {
 	Factors       []string
 }
 
+// IntentRequest represents the data sent to the semantic service.
+type IntentRequest struct {
+	Service      string   `json:"service"`
+	CommitHash   string   `json:"commit_hash"`
+	Branch       string   `json:"branch"`
+	ChangedFiles []string `json:"changed_files"`
+	DiffSummary  string   `json:"diff_summary,omitempty"`
+}
+
+// IntentResponse represents the semantic classification result.
+type IntentResponse struct {
+	Intent     string  `json:"intent"`
+	Confidence float64 `json:"confidence"`
+	Reasoning  string  `json:"reasoning"`
+}
+
 // NewDecisionService creates a new decision service
 func NewDecisionService(
 	topology TopologyClient,
-	semantic *clients.SemanticClient,
+	semantic SemanticClient,
 	scoring ScoringClient,
 	deployRepo DeploymentRepository,
 	riskRepo RiskScoreRepository,
@@ -87,7 +108,7 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 	}
 
 	// Step 2: Classify semantic intent
-	intentReq := &clients.IntentRequest{
+	intentReq := &IntentRequest{
 		Service:      req.Service,
 		CommitHash:   req.CommitHash,
 		Branch:       req.Branch,
@@ -97,7 +118,7 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 	if err != nil {
 		// Log error and fallback to default intent
 		fmt.Printf("Warning: semantic classification failed: %v\n", err)
-		intentRes = &clients.IntentResponse{
+		intentRes = &IntentResponse{
 			Intent:     "unknown",
 			Confidence: 0.0,
 			Reasoning:  "classification failed",

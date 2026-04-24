@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
 // SemanticClient connects to the semantic-python service to classify deployment intent.
@@ -23,24 +25,8 @@ func NewSemanticClient(url string) *SemanticClient {
 	}
 }
 
-// IntentRequest represents the data sent to the semantic service.
-type IntentRequest struct {
-	Service      string   `json:"service"`
-	CommitHash   string   `json:"commit_hash"`
-	Branch       string   `json:"branch"`
-	ChangedFiles []string `json:"changed_files"`
-	DiffSummary  string   `json:"diff_summary,omitempty"`
-}
-
-// IntentResponse represents the semantic classification result.
-type IntentResponse struct {
-	Intent     string  `json:"intent"`
-	Confidence float64 `json:"confidence"`
-	Reasoning  string  `json:"reasoning"`
-}
-
 // ClassifyIntent calls the semantic service to classify the deployment intent.
-func (c *SemanticClient) ClassifyIntent(ctx context.Context, req *IntentRequest) (*IntentResponse, error) {
+func (c *SemanticClient) ClassifyIntent(ctx context.Context, req *services.IntentRequest) (*services.IntentResponse, error) {
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -63,7 +49,7 @@ func (c *SemanticClient) ClassifyIntent(ctx context.Context, req *IntentRequest)
 		return nil, fmt.Errorf("semantic service returned status: %d", httpResp.StatusCode)
 	}
 
-	var res IntentResponse
+	var res services.IntentResponse
 	if err := json.NewDecoder(httpResp.Body).Decode(&res); err != nil {
 		return nil, err
 	}

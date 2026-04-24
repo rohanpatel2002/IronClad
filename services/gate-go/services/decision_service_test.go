@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
@@ -31,11 +30,11 @@ func (m *mockScoringClient) ScoreDeployment(_ context.Context, _ *services.Scori
 }
 
 type mockSemanticClient struct {
-	response *clients.IntentResponse
+	response *services.IntentResponse
 	err      error
 }
 
-func (m *mockSemanticClient) ClassifyIntent(_ context.Context, _ *clients.IntentRequest) (*clients.IntentResponse, error) {
+func (m *mockSemanticClient) ClassifyIntent(_ context.Context, _ *services.IntentRequest) (*services.IntentResponse, error) {
 	return m.response, m.err
 }
 
@@ -43,7 +42,7 @@ func (m *mockSemanticClient) ClassifyIntent(_ context.Context, _ *clients.Intent
 func makeService(blastRadius float64, impacted []string, scores *services.ScoringResponse) *services.DecisionService {
 	topology := &mockTopologyClient{blastRadius: blastRadius, impactedServices: impacted}
 	scoring := &mockScoringClient{response: scores}
-	semantic := &mockSemanticClient{response: &clients.IntentResponse{Intent: "feature", Confidence: 0.9, Reasoning: "test"}}
+	semantic := &mockSemanticClient{response: &services.IntentResponse{Intent: "feature", Confidence: 0.9, Reasoning: "test"}}
 	return services.NewDecisionService(
 		topology,
 		semantic,
