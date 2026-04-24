@@ -12,6 +12,7 @@ import (
 // DecisionService handles the core decision-making logic
 type DecisionService struct {
 	topologyClient     TopologyClient
+	semanticClient     *clients.SemanticClient
 	scoringClient      ScoringClient
 	deploymentRepo     DeploymentRepository
 	riskScoreRepo      RiskScoreRepository
@@ -46,6 +47,7 @@ type ScoringRequest struct {
 	ChangedFiles   []string
 	Environment    string
 	ServiceCrit    float64 // criticality 0-1
+	Intent         string
 }
 
 // ScoringResponse from the scoring service
@@ -60,12 +62,14 @@ type ScoringResponse struct {
 // NewDecisionService creates a new decision service
 func NewDecisionService(
 	topology TopologyClient,
+	semantic *clients.SemanticClient,
 	scoring ScoringClient,
 	deployRepo DeploymentRepository,
 	riskRepo RiskScoreRepository,
 ) *DecisionService {
 	return &DecisionService{
 		topologyClient:     topology,
+		semanticClient:     semantic,
 		scoringClient:      scoring,
 		deploymentRepo:     deployRepo,
 		riskScoreRepo:      riskRepo,
@@ -82,7 +86,25 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 		return nil, fmt.Errorf("topology check failed: %w", err)
 	}
 
-	// Step 2: Score the deployment
+	// Step 2: Classify semantic intent
+	intentReq := &clients.IntentRequest{
+		Service:      req.Service,
+		CommitHash:   req.CommitHash,
+		Branch:       req.Branch,
+		ChangedFiles: req.ChangedFiles,
+	}
+	intentRes, err := ds.semanticClient.ClassifyIntent(ctx, intentReq)
+	if err != nil {
+		// Log error and fallback to default intent
+		fmt.Printf("Warning: semantic classification failed: %v\n", err)
+		intentRes = &clients.IntentResponse{
+			Intent:     "unknown",
+			Confidence: 0.0,
+			Reasoning:  "classification failed",
+		}
+	}
+
+	// Step 3: Score the deployment
 	scoringReq := &ScoringRequest{
 		Service:      req.Service,
 		CommitHash:   req.CommitHash,
@@ -90,6 +112,7 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 		ChangedFiles: req.ChangedFiles,
 		Environment:  req.Environment,
 		ServiceCrit:  0.7, // TODO: fetch from config
+		Intent:       intentRes.Intent,
 	}
 
 	scoreResp, err := ds.scoringClient.ScoreDeployment(ctx, scoringReq)
@@ -111,13 +134,15 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 
 	decisionTime := time.Now()
 	result := &models.DeploymentDecision{
-		DecisionID:        decisionID,
-		Decision:          decision,
-		RiskScores:        models.RiskScores{BlastRadius: scoreResp.BlastRadius, Reversibility: scoreResp.Reversibility, TimingRisk: scoreResp.TimingRisk, ComputedAt: decisionTime},
-		Confidence:        scoreResp.Confidence,
-		Explanation:       explanation,
+		DecisionID:           decisionID,
+		Decision:             decision,
+		RiskScores:           models.RiskScores{BlastRadius: scoreResp.BlastRadius, Reversibility: scoreResp.Reversibility, TimingRisk: scoreResp.TimingRisk, ComputedAt: decisionTime},
+		Confidence:           scoreResp.Confidence,
+		Explanation:          explanation,
 		SuggestedSafeWindows: safeWindows,
-		DecisionTimestamp: decisionTime,
+		DecisionTimestamp:    decisionTime,
+		Intent:               intentRes.Intent,
+		IntentConfidence:     intentRes.Confidence,
 	}
 
 	// Step 6: Persist decision (non-blocking)
@@ -129,6 +154,7 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 			Branch:          req.Branch,
 			ServiceName:     req.Service,
 			AuthorEmail:     req.AuthorEmail,
+			SemanticIntent:  intentRes.Intent,
 			DecisionStatus:  string(decision),
 			DecisionTime:    decisionTime,
 			CreatedAt:       time.Now(),

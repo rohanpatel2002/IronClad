@@ -29,8 +29,14 @@ func main() {
 		scoringURL = "http://localhost:8083"
 	}
 
+	semanticURL := os.Getenv("SEMANTIC_URL")
+	if semanticURL == "" {
+		semanticURL = "http://localhost:8082"
+	}
+
 	// Wire dependencies
 	topologyClient := clients.NewTopologyClient(topologyURL)
+	semanticClient := clients.NewSemanticClient(semanticURL)
 	scoringClient := clients.NewScoringClient(scoringURL)
 	
 	var deployRepo services.DeploymentRepository
@@ -54,7 +60,7 @@ func main() {
 		log.Println("Using in-memory no-op repositories (DATABASE_URL not set)")
 	}
 
-	decisionSvc := services.NewDecisionService(topologyClient, scoringClient, deployRepo, riskRepo)
+	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
 
 	// Configure Gin
@@ -87,6 +93,7 @@ func main() {
 
 	fmt.Printf("🚀 IRONCLAD Gate service starting on port %s\n", port)
 	fmt.Printf("   Topology: %s\n", topologyURL)
+	fmt.Printf("   Semantic: %s\n", semanticURL)
 	fmt.Printf("   Scoring:  %s\n", scoringURL)
 
 	if err := router.Run(":" + port); err != nil {

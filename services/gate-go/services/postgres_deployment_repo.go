@@ -23,17 +23,17 @@ func (r *PostgresDeploymentRepository) Store(ctx context.Context, record *models
 	query := `
 		INSERT INTO deployments (
 			id, deploy_timestamp, commit_hash, branch, service_name,
-			author_email, diff_summary, decision_status, decision_timestamp,
+			author_email, diff_summary, semantic_intent, decision_status, decision_timestamp,
 			explanation, created_at, updated_at
 		) VALUES (
 			$1, $2, $3, $4, $5,
-			$6, $7, $8, $9,
-			$10, $11, $12
+			$6, $7, $8, $9, $10,
+			$11, $12, $13
 		)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		record.ID, record.DeployTimestamp, record.CommitHash, record.Branch, record.ServiceName,
-		record.AuthorEmail, record.DiffSummary, record.DecisionStatus, record.DecisionTime,
+		record.AuthorEmail, record.DiffSummary, record.SemanticIntent, record.DecisionStatus, record.DecisionTime,
 		record.Explanation, record.CreatedAt, record.UpdatedAt,
 	)
 	if err != nil {
@@ -47,7 +47,7 @@ func (r *PostgresDeploymentRepository) Get(ctx context.Context, id string) (*mod
 	query := `
 		SELECT 
 			id, deploy_timestamp, commit_hash, branch, service_name,
-			author_email, diff_summary, decision_status, decision_timestamp,
+			author_email, diff_summary, semantic_intent, decision_status, decision_timestamp,
 			explanation, created_at, updated_at
 		FROM deployments
 		WHERE id = $1
@@ -55,14 +55,14 @@ func (r *PostgresDeploymentRepository) Get(ctx context.Context, id string) (*mod
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var rec models.DeploymentRecord
-	// diff_summary and explanation can be null in the DB, so we use sql.NullString
-	var diffSummary, explanation, authorEmail sql.NullString
+	// diff_summary, semantic_intent, and explanation can be null in the DB, so we use sql.NullString
+	var diffSummary, semanticIntent, explanation, authorEmail sql.NullString
 	// decision_timestamp can be null, but in Go models it's time.Time, so we use sql.NullTime
 	var decisionTime sql.NullTime
 
 	err := row.Scan(
 		&rec.ID, &rec.DeployTimestamp, &rec.CommitHash, &rec.Branch, &rec.ServiceName,
-		&authorEmail, &diffSummary, &rec.DecisionStatus, &decisionTime,
+		&authorEmail, &diffSummary, &semanticIntent, &rec.DecisionStatus, &decisionTime,
 		&explanation, &rec.CreatedAt, &rec.UpdatedAt,
 	)
 	if err != nil {
@@ -74,6 +74,7 @@ func (r *PostgresDeploymentRepository) Get(ctx context.Context, id string) (*mod
 
 	rec.AuthorEmail = authorEmail.String
 	rec.DiffSummary = diffSummary.String
+	rec.SemanticIntent = semanticIntent.String
 	rec.Explanation = explanation.String
 	if decisionTime.Valid {
 		rec.DecisionTime = decisionTime.Time

@@ -50,6 +50,7 @@ type remoteScoringRequest struct {
 	ChangedFiles []string `json:"changed_files"`
 	Environment  string   `json:"environment"`
 	ServiceCrit  float64  `json:"service_criticality"`
+	Intent       string   `json:"intent"`
 }
 
 type remoteScoringResponse struct {
@@ -68,6 +69,7 @@ func (s *ScoringClient) callRemoteScorer(ctx context.Context, req *services.Scor
 		ChangedFiles: req.ChangedFiles,
 		Environment:  req.Environment,
 		ServiceCrit:  req.ServiceCrit,
+		Intent:       req.Intent,
 	})
 	if err != nil {
 		return nil, err
@@ -116,8 +118,8 @@ func (s *ScoringClient) scoreInProcess(req *services.ScoringRequest) *services.S
 		factors = append(factors, fmt.Sprintf("High blast radius (%.0f%% of system affected)", blastScore*100))
 	}
 
-	// Axis 2: Reversibility — inferred from changed files
-	reversibility, revFactors := scoreReversibility(req.ChangedFiles)
+	// Axis 2: Reversibility — inferred from changed files and semantic intent
+	reversibility, revFactors := scoreReversibility(req.ChangedFiles, req.Intent)
 	factors = append(factors, revFactors...)
 
 	// Axis 3: Timing Risk — based on current UTC time
@@ -144,9 +146,9 @@ func (s *ScoringClient) scoreInProcess(req *services.ScoringRequest) *services.S
 	}
 }
 
-// scoreReversibility returns a 0-1 score based on file types changed.
+// scoreReversibility returns a 0-1 score based on file types changed and intent.
 // High reversibility score = HARD to reverse (risky).
-func scoreReversibility(changedFiles []string) (float64, []string) {
+func scoreReversibility(changedFiles []string, intent string) (float64, []string) {
 	if len(changedFiles) == 0 {
 		return 0.3, nil // unknown → moderate
 	}
@@ -172,12 +174,15 @@ func scoreReversibility(changedFiles []string) (float64, []string) {
 		}
 	}
 
-	if migrationCount > 0 {
+	if intent == "migration" || migrationCount > 0 {
 		score = 0.85 // DB migrations are very hard to reverse
-		factors = append(factors, fmt.Sprintf("%d database migration(s) detected — high irreversibility", migrationCount))
-	} else if configCount > 0 && codeCount == 0 {
+		factors = append(factors, "Database migration intent/files detected — high irreversibility")
+	} else if intent == "config_update" || (configCount > 0 && codeCount == 0) {
 		score = 0.55 // config-only changes are moderate
-		factors = append(factors, "Configuration-only changes — moderate reversibility risk")
+		factors = append(factors, "Configuration update intent — moderate reversibility risk")
+	} else if intent == "hotfix" {
+		score = 0.80 // Hotfixes are usually rushed and risky to reverse
+		factors = append(factors, "Hotfix intent — high risk, monitor closely")
 	} else if testCount > 0 && codeCount == 0 && configCount == 0 {
 		score = 0.1 // test-only is easily reversible
 	} else {
