@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
@@ -30,8 +32,27 @@ func main() {
 	// Wire dependencies
 	topologyClient := clients.NewTopologyClient(topologyURL)
 	scoringClient := clients.NewScoringClient(scoringURL)
-	deployRepo := services.NewNoopDeploymentRepository()
-	riskRepo := services.NewNoopRiskScoreRepository()
+	
+	var deployRepo services.DeploymentRepository
+	var riskRepo services.RiskScoreRepository
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL != "" {
+		db, err := sql.Open("postgres", dbURL)
+		if err != nil {
+			log.Fatalf("Failed to open database: %v", err)
+		}
+		if err := db.Ping(); err != nil {
+			log.Fatalf("Failed to connect to database: %v", err)
+		}
+		deployRepo = services.NewPostgresDeploymentRepository(db)
+		riskRepo = services.NewPostgresRiskScoreRepository(db)
+		log.Println("Connected to PostgreSQL for persistence")
+	} else {
+		deployRepo = services.NewNoopDeploymentRepository()
+		riskRepo = services.NewNoopRiskScoreRepository()
+		log.Println("Using in-memory no-op repositories (DATABASE_URL not set)")
+	}
 
 	decisionSvc := services.NewDecisionService(topologyClient, scoringClient, deployRepo, riskRepo)
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
