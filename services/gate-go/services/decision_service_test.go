@@ -29,12 +29,23 @@ func (m *mockScoringClient) ScoreDeployment(_ context.Context, _ *services.Scori
 	return m.response, m.err
 }
 
+type mockSemanticClient struct {
+	response *services.IntentResponse
+	err      error
+}
+
+func (m *mockSemanticClient) ClassifyIntent(_ context.Context, _ *services.IntentRequest) (*services.IntentResponse, error) {
+	return m.response, m.err
+}
+
 // makeService builds a DecisionService with mock dependencies
 func makeService(blastRadius float64, impacted []string, scores *services.ScoringResponse) *services.DecisionService {
 	topology := &mockTopologyClient{blastRadius: blastRadius, impactedServices: impacted}
 	scoring := &mockScoringClient{response: scores}
+	semantic := &mockSemanticClient{response: &services.IntentResponse{Intent: "feature", Confidence: 0.9, Reasoning: "test"}}
 	return services.NewDecisionService(
 		topology,
+		semantic,
 		scoring,
 		services.NewNoopDeploymentRepository(),
 		services.NewNoopRiskScoreRepository(),

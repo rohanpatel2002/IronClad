@@ -51,6 +51,8 @@ type DeploymentDecision struct {
 	Explanation            Explanation   `json:"explanation"`
 	SuggestedSafeWindows   []TimeWindow  `json:"suggested_safe_windows,omitempty"`
 	DecisionTimestamp      time.Time     `json:"decision_timestamp"`
+	Intent                 string        `json:"intent,omitempty"`
+	IntentConfidence       float64       `json:"intent_confidence,omitempty"`
 }
 
 // TimeWindow represents a recommended deployment window
@@ -70,6 +72,7 @@ type DeploymentRecord struct {
 	ServiceName     string    `db:"service_name"`
 	AuthorEmail     string    `db:"author_email"`
 	DiffSummary     string    `db:"diff_summary"`
+	SemanticIntent  string    `db:"semantic_intent"`
 	DecisionStatus  string    `db:"decision_status"`
 	DecisionTime    time.Time `db:"decision_timestamp"`
 	Explanation     string    `db:"explanation"`

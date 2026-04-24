@@ -64,6 +64,7 @@ services:
     environment:
       SEMANTIC_PORT: "8082"
       DEBUG: "false"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8082/health || exit 1"]
       interval: 10s
@@ -82,6 +83,7 @@ services:
       GIN_MODE: release
       TOPOLOGY_URL: "http://topology-go:8081"
       SCORING_URL: "http://scoring-python:8083"
+      SEMANTIC_URL: "http://semantic-python:8082"
       DATABASE_URL: "postgres://ironclad:ironclad_dev@postgres:5432/ironclad"
     depends_on:
       postgres:
@@ -89,6 +91,8 @@ services:
       topology-go:
         condition: service_healthy
       scoring-python:
+        condition: service_healthy
+      semantic-python:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
