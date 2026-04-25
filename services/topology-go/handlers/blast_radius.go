@@ -46,7 +46,6 @@ func (h *TopologyHandler) handleBlastRadius(c *gin.Context) {
 
 	_, known := h.graph.GetService(req.Service)
 	if !known {
-		// Unknown services still get a blast radius estimate
 		c.JSON(http.StatusOK, gin.H{
 			"service":            req.Service,
 			"blast_radius_score": 0.5,
@@ -57,6 +56,7 @@ func (h *TopologyHandler) handleBlastRadius(c *gin.Context) {
 	}
 
 	result := h.graph.ComputeBlastRadius(req.Service)
+	RecordBlastRadiusTraversal()
 	c.JSON(http.StatusOK, result)
 }
 
