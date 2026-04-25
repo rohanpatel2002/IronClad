@@ -63,6 +63,7 @@ func main() {
 
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
+	webhookHandler := handlers.NewWebhookHandler(decisionSvc)
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -90,6 +91,7 @@ func main() {
 	// API routes
 	v1 := router.Group("/api/v1")
 	decisionHandler.RegisterRoutes(v1)
+	webhookHandler.RegisterRoutes(v1)
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {
