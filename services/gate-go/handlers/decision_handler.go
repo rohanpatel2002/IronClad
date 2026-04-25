@@ -74,6 +74,7 @@ func (h *DecisionHandler) handleDecision(c *gin.Context) {
 	}
 
 	h.store.save(decision)
+	RecordDecisionMetric(string(decision.Decision))
 
 	c.JSON(http.StatusOK, decision)
 }
