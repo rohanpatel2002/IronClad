@@ -1,20 +1,26 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rohanpatel2002/ironclad/services/topology-go/graph"
 )
 
-// TopologyHandler provides HTTP handlers for the topology/blast-radius API.
-type TopologyHandler struct {
-	graph *graph.DependencyGraph
+// GraphProvider defines the interface for fetching the current dependency graph.
+type GraphProvider interface {
+	GetGraph(ctx context.Context) (*graph.DependencyGraph, error)
 }
 
-// NewTopologyHandler creates a handler backed by the given graph.
-func NewTopologyHandler(g *graph.DependencyGraph) *TopologyHandler {
-	return &TopologyHandler{graph: g}
+// TopologyHandler provides HTTP handlers for the topology/blast-radius API.
+type TopologyHandler struct {
+	provider GraphProvider
+}
+
+// NewTopologyHandler creates a handler backed by the given graph provider.
+func NewTopologyHandler(p GraphProvider) *TopologyHandler {
+	return &TopologyHandler{provider: p}
 }
 
 // RegisterRoutes attaches all topology routes to the given router group.
@@ -44,9 +50,14 @@ func (h *TopologyHandler) handleBlastRadius(c *gin.Context) {
 		return
 	}
 
-	_, known := h.graph.GetService(req.Service)
+	g, err := h.provider.GetGraph(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "graph_unavailable", "message": err.Error()})
+		return
+	}
+
+	_, known := g.GetService(req.Service)
 	if !known {
-		// Unknown services still get a blast radius estimate
 		c.JSON(http.StatusOK, gin.H{
 			"service":            req.Service,
 			"blast_radius_score": 0.5,
@@ -56,7 +67,8 @@ func (h *TopologyHandler) handleBlastRadius(c *gin.Context) {
 		return
 	}
 
-	result := h.graph.ComputeBlastRadius(req.Service)
+	result := g.ComputeBlastRadius(req.Service)
+	RecordBlastRadiusTraversal()
 	c.JSON(http.StatusOK, result)
 }
 
@@ -64,7 +76,13 @@ func (h *TopologyHandler) handleBlastRadius(c *gin.Context) {
 //
 //	GET /api/v1/services
 func (h *TopologyHandler) handleListServices(c *gin.Context) {
-	services := h.graph.ListServices()
+	g, err := h.provider.GetGraph(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "graph_unavailable"})
+		return
+	}
+
+	services := g.ListServices()
 	c.JSON(http.StatusOK, gin.H{
 		"services": services,
 		"count":    len(services),
@@ -76,7 +94,14 @@ func (h *TopologyHandler) handleListServices(c *gin.Context) {
 //	GET /api/v1/services/:name
 func (h *TopologyHandler) handleGetService(c *gin.Context) {
 	name := c.Param("name")
-	node, ok := h.graph.GetService(name)
+	
+	g, err := h.provider.GetGraph(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "graph_unavailable"})
+		return
+	}
+
+	node, ok := g.GetService(name)
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error":   "not_found",
@@ -85,7 +110,7 @@ func (h *TopologyHandler) handleGetService(c *gin.Context) {
 		return
 	}
 
-	result := h.graph.ComputeBlastRadius(name)
+	result := g.ComputeBlastRadius(name)
 
 	c.JSON(http.StatusOK, gin.H{
 		"service":            node,
@@ -115,7 +140,13 @@ func (h *TopologyHandler) handleAddService(c *gin.Context) {
 		req.Criticality = 0.5
 	}
 
-	h.graph.AddService(graph.ServiceNode{
+	g, err := h.provider.GetGraph(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "graph_unavailable"})
+		return
+	}
+
+	g.AddService(graph.ServiceNode{
 		Name:        req.Name,
 		Criticality: req.Criticality,
 		DependsOn:   req.DependsOn,

@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
@@ -62,6 +63,7 @@ func main() {
 
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
+	webhookHandler := handlers.NewWebhookHandler(decisionSvc)
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -71,6 +73,10 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(requestLogger())
+	router.Use(handlers.PrometheusMiddleware())
+
+	// Prometheus metrics endpoint
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -85,6 +91,7 @@ func main() {
 	// API routes
 	v1 := router.Group("/api/v1")
 	decisionHandler.RegisterRoutes(v1)
+	webhookHandler.RegisterRoutes(v1)
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {

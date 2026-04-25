@@ -8,20 +8,30 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/retry"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
+	"github.com/sony/gobreaker"
 )
 
 // SemanticClient connects to the semantic-python service to classify deployment intent.
 type SemanticClient struct {
 	semanticURL string
 	httpClient  *http.Client
+	cb          *gobreaker.CircuitBreaker
 }
 
 // NewSemanticClient creates a new semantic client.
 func NewSemanticClient(url string) *SemanticClient {
+	st := gobreaker.Settings{
+		Name:        "SemanticClient",
+		MaxRequests: 3,
+		Interval:    5 * time.Second,
+		Timeout:     10 * time.Second,
+	}
 	return &SemanticClient{
 		semanticURL: url,
 		httpClient:  &http.Client{Timeout: 5 * time.Second},
+		cb:          gobreaker.NewCircuitBreaker(st),
 	}
 }
 
@@ -39,10 +49,25 @@ func (c *SemanticClient) ClassifyIntent(ctx context.Context, req *services.Inten
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	httpResp, err := c.httpClient.Do(httpReq)
+	respInterface, err := retry.DoWithExponentialBackoff(ctx, 3, 100*time.Millisecond, 2*time.Second, func() (interface{}, error) {
+		return c.cb.Execute(func() (interface{}, error) {
+			resp, reqErr := c.httpClient.Do(httpReq)
+			if reqErr != nil {
+				return nil, reqErr
+			}
+			if resp.StatusCode >= 500 {
+				resp.Body.Close()
+				return nil, fmt.Errorf("server error: %d", resp.StatusCode)
+			}
+			return resp, nil
+		})
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("semantic service unavailable: %w", err)
+		return nil, fmt.Errorf("semantic service unavailable (cb): %w", err)
 	}
+
+	httpResp := respInterface.(*http.Response)
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {

@@ -18,6 +18,7 @@ class ScoringRequest:
     commit_hash: str
     blast_radius: float          # pre-computed from topology service (0-1)
     changed_files: List[str] = field(default_factory=list)
+    patch_content: str = ""
     environment: str = "staging"
     service_criticality: float = 0.5  # 0-1
 
@@ -162,6 +163,12 @@ class RiskScorer:
         self.blast_scorer = BlastRadiusScorer()
         self.reversibility_scorer = ReversibilityScorer()
         self.timing_scorer = TimingRiskScorer()
+        
+        # Initialize grammar matcher
+        from app.grammar.learner import FailureGrammarLearner
+        from app.grammar.matcher import GrammarMatcher
+        self.grammar_learner = FailureGrammarLearner()
+        self.grammar_matcher = GrammarMatcher(self.grammar_learner)
 
     def score(self, req: ScoringRequest) -> ScoringResponse:
         start = time.time()
@@ -169,6 +176,21 @@ class RiskScorer:
         blast_score, blast_factors = self.blast_scorer.score(req)
         rev_score, rev_factors = self.reversibility_scorer.score(req)
         timing_score, timing_factors = self.timing_scorer.score(req)
+
+        # Evaluate against grammar
+        grammar_factors = []
+        if req.patch_content:
+            grammar_matches = self.grammar_matcher.analyze_patch(req.patch_content)
+            for match in grammar_matches:
+                grammar_factors.append(f"Grammar Match [{match.severity}]: {match.name} - {match.description}")
+                # Amplify other risk scores based on grammar severity
+                if match.severity == "CRITICAL":
+                    rev_score = min(1.0, rev_score + 0.5)
+                    blast_score = min(1.0, blast_score + 0.3)
+                elif match.severity == "HIGH":
+                    rev_score = min(1.0, rev_score + 0.3)
+                elif match.severity == "MEDIUM":
+                    rev_score = min(1.0, rev_score + 0.1)
 
         env_multiplier = self.ENVIRONMENT_MULTIPLIERS.get(req.environment.lower(), 1.0)
 
@@ -179,7 +201,7 @@ class RiskScorer:
             + timing_score * self.WEIGHTS["timing"]
         ) * env_multiplier
 
-        all_factors = blast_factors + rev_factors + timing_factors
+        all_factors = blast_factors + rev_factors + timing_factors + grammar_factors
 
         confidence = self._compute_confidence(blast_score, rev_score, timing_score)
 
