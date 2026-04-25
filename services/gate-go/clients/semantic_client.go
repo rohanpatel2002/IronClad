@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sony/gobreaker"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/retry"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
+	"github.com/sony/gobreaker"
 )
 
 // SemanticClient connects to the semantic-python service to classify deployment intent.
@@ -48,16 +49,18 @@ func (c *SemanticClient) ClassifyIntent(ctx context.Context, req *services.Inten
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	respInterface, err := c.cb.Execute(func() (interface{}, error) {
-		resp, reqErr := c.httpClient.Do(httpReq)
-		if reqErr != nil {
-			return nil, reqErr
-		}
-		if resp.StatusCode >= 500 {
-			resp.Body.Close()
-			return nil, fmt.Errorf("server error: %d", resp.StatusCode)
-		}
-		return resp, nil
+	respInterface, err := retry.DoWithExponentialBackoff(ctx, 3, 100*time.Millisecond, 2*time.Second, func() (interface{}, error) {
+		return c.cb.Execute(func() (interface{}, error) {
+			resp, reqErr := c.httpClient.Do(httpReq)
+			if reqErr != nil {
+				return nil, reqErr
+			}
+			if resp.StatusCode >= 500 {
+				resp.Body.Close()
+				return nil, fmt.Errorf("server error: %d", resp.StatusCode)
+			}
+			return resp, nil
+		})
 	})
 
 	if err != nil {

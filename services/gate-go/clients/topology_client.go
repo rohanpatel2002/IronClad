@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/retry"
 	"github.com/sony/gobreaker"
 )
 
@@ -63,16 +64,18 @@ func (t *TopologyClient) GetBlastRadius(ctx context.Context, service string, cha
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	respInterface, err := t.cb.Execute(func() (interface{}, error) {
-		resp, reqErr := t.httpClient.Do(httpReq)
-		if reqErr != nil {
-			return nil, reqErr
-		}
-		if resp.StatusCode >= 500 {
-			resp.Body.Close()
-			return nil, fmt.Errorf("server error: %d", resp.StatusCode)
-		}
-		return resp, nil
+	respInterface, err := retry.DoWithExponentialBackoff(ctx, 3, 100*time.Millisecond, 2*time.Second, func() (interface{}, error) {
+		return t.cb.Execute(func() (interface{}, error) {
+			resp, reqErr := t.httpClient.Do(httpReq)
+			if reqErr != nil {
+				return nil, reqErr
+			}
+			if resp.StatusCode >= 500 {
+				resp.Body.Close()
+				return nil, fmt.Errorf("server error: %d", resp.StatusCode)
+			}
+			return resp, nil
+		})
 	})
 
 	if err != nil {

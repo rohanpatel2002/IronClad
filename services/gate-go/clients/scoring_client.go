@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sony/gobreaker"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/retry"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
+	"github.com/sony/gobreaker"
 )
 
 // ScoringClient computes 3-axis risk scores either via the scoring-python
@@ -91,16 +92,18 @@ func (s *ScoringClient) callRemoteScorer(ctx context.Context, req *services.Scor
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	respInterface, err := s.cb.Execute(func() (interface{}, error) {
-		resp, reqErr := s.httpClient.Do(httpReq)
-		if reqErr != nil {
-			return nil, reqErr
-		}
-		if resp.StatusCode >= 500 {
-			resp.Body.Close()
-			return nil, fmt.Errorf("server error: %d", resp.StatusCode)
-		}
-		return resp, nil
+	respInterface, err := retry.DoWithExponentialBackoff(ctx, 3, 100*time.Millisecond, 2*time.Second, func() (interface{}, error) {
+		return s.cb.Execute(func() (interface{}, error) {
+			resp, reqErr := s.httpClient.Do(httpReq)
+			if reqErr != nil {
+				return nil, reqErr
+			}
+			if resp.StatusCode >= 500 {
+				resp.Body.Close()
+				return nil, fmt.Errorf("server error: %d", resp.StatusCode)
+			}
+			return resp, nil
+		})
 	})
 
 	if err != nil {
