@@ -11,13 +11,15 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
 // WebhookHandler handles incoming webhooks from external systems like GitHub.
 type WebhookHandler struct {
-	svc          *services.DecisionService
+	svc           *services.DecisionService
+	githubClient  *clients.GitHubClient
 	webhookSecret []byte
 }
 
@@ -29,6 +31,7 @@ func NewWebhookHandler(svc *services.DecisionService) *WebhookHandler {
 	}
 	return &WebhookHandler{
 		svc:           svc,
+		githubClient:  clients.NewGitHubClient(),
 		webhookSecret: []byte(secret),
 	}
 }
@@ -85,15 +88,64 @@ func (h *WebhookHandler) handleGitHubWebhook(c *gin.Context) {
 		return
 	}
 
-	// Just log it for now to verify parsing works
+	// 5. Fetch changed files
+	files, err := h.githubClient.GetPullRequestFiles(c.Request.Context(), payload.Repository.FullName, payload.Number)
+	if err != nil {
+		fmt.Printf("Failed to fetch PR files: %v\n", err)
+		// Fallback to empty list
+		files = []string{}
+	}
+
+	// 6. Evaluate deployment
+	req := &models.DeploymentRequest{
+		CommitHash:   payload.PullRequest.Head.SHA,
+		Service:      payload.Repository.Name,
+		Branch:       payload.PullRequest.Head.Ref,
+		Environment:  "production", // Assume prod by default for PRs targeting main
+		ChangedFiles: files,
+		AuthorEmail:  payload.PullRequest.User.Login, // Github doesn't send email in this payload easily, use login
+	}
+
+	decision, err := h.svc.EvaluateDeployment(c.Request.Context(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "evaluation failed", "message": err.Error()})
+		return
+	}
+
+	// 7. Post comment
+	comment := formatDecisionComment(decision)
+	_ = h.githubClient.PostPullRequestComment(c.Request.Context(), payload.Repository.FullName, payload.Number, comment)
+
 	c.JSON(http.StatusOK, gin.H{
-		"status": "received",
-		"parsed": gin.H{
-			"repo":   payload.Repository.Name,
-			"branch": payload.PullRequest.Head.Ref,
-			"commit": payload.PullRequest.Head.SHA,
-		},
+		"status":   "processed",
+		"decision": decision.Decision,
 	})
+}
+
+func formatDecisionComment(d *models.DeploymentDecision) string {
+	icon := "✅"
+	if d.Decision == models.DecisionWarn {
+		icon = "⚠️"
+	} else if d.Decision == models.DecisionBlock {
+		icon = "❌"
+	}
+
+	return fmt.Sprintf("## %s IRONCLAD Deployment Decision: **%s**\n\n"+
+		"**Summary:** %s\n\n"+
+		"**Semantic Intent:** `%s` (Confidence: %.0f%%)\n\n"+
+		"**Risk Factors:**\n%s\n",
+		icon, d.Decision, d.Explanation.Summary, d.Intent, d.IntentConfidence*100, formatList(d.Explanation.RiskFactors))
+}
+
+func formatList(items []string) string {
+	if len(items) == 0 {
+		return "- None"
+	}
+	res := ""
+	for _, item := range items {
+		res += fmt.Sprintf("- %s\n", item)
+	}
+	return res
 }
 
 // verifySignature checks the SHA-256 HMAC of the payload against the GitHub signature.
