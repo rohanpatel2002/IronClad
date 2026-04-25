@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sony/gobreaker"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
@@ -18,13 +19,21 @@ import (
 type ScoringClient struct {
 	scoringURL string
 	httpClient *http.Client
+	cb         *gobreaker.CircuitBreaker
 }
 
 // NewScoringClient creates a new scoring client with sensible timeouts.
 func NewScoringClient(url string) *ScoringClient {
+	st := gobreaker.Settings{
+		Name:        "ScoringClient",
+		MaxRequests: 3,
+		Interval:    5 * time.Second,
+		Timeout:     10 * time.Second,
+	}
 	return &ScoringClient{
 		scoringURL: url,
 		httpClient: &http.Client{Timeout: 3 * time.Second},
+		cb:         gobreaker.NewCircuitBreaker(st),
 	}
 }
 
@@ -82,10 +91,23 @@ func (s *ScoringClient) callRemoteScorer(ctx context.Context, req *services.Scor
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	httpResp, err := s.httpClient.Do(httpReq)
+	respInterface, err := s.cb.Execute(func() (interface{}, error) {
+		resp, reqErr := s.httpClient.Do(httpReq)
+		if reqErr != nil {
+			return nil, reqErr
+		}
+		if resp.StatusCode >= 500 {
+			resp.Body.Close()
+			return nil, fmt.Errorf("server error: %d", resp.StatusCode)
+		}
+		return resp, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("scoring service unavailable: %w", err)
+		return nil, fmt.Errorf("scoring service unavailable (cb): %w", err)
 	}
+
+	httpResp := respInterface.(*http.Response)
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
