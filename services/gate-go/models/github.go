@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 // GitHubWebhookPayload represents the JSON payload from a GitHub pull_request event.
 type GitHubWebhookPayload struct {
 	Action      string     `json:"action"`
