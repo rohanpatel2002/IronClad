@@ -1,6 +1,6 @@
 module github.com/rohanpatel2002/ironclad/services/gate-go
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/gin-gonic/gin v1.9.1
@@ -8,6 +8,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sony/gobreaker v1.0.0
+	golang.org/x/time v0.15.0
 )
 
 require (

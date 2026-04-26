@@ -75,12 +75,33 @@ def score_deployment():
 
 @app.route('/api/v1/failure-grammar', methods=['GET'])
 def get_failure_grammar():
-    """Retrieve learned failure patterns (stub — Phase 3 will implement learning)."""
+    """Retrieve learned failure patterns."""
+    signatures = scorer.grammar_learner.get_signatures()
     return jsonify({
-        "patterns": [],
-        "total": 0,
-        "message": "Failure grammar learner not yet implemented — coming in Phase 3",
+        "patterns": signatures,
+        "total": len(signatures),
     }), 200
+
+
+@app.route('/api/v1/failure-grammar', methods=['POST'])
+def add_failure_grammar():
+    """Add a new failure pattern to the grammar."""
+    data = request.get_json(force=True)
+    if not data:
+        return jsonify({"error": "invalid_request", "message": "JSON body required"}), 400
+
+    required = ("id", "name", "pattern", "type", "severity", "description")
+    for field_name in required:
+        if field_name not in data:
+            return jsonify({"error": "missing_field", "field": field_name}), 400
+
+    scorer.grammar_learner.add_signature(data)
+
+    return jsonify({
+        "status": "success",
+        "message": "Signature added successfully",
+        "signature": data
+    }), 201
 
 
 if __name__ == '__main__':

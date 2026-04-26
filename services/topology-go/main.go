@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -13,21 +13,25 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/topology-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/topology-go/graph"
 	"github.com/rohanpatel2002/ironclad/services/topology-go/handlers"
+	"github.com/rohanpatel2002/ironclad/services/topology-go/pkg/logger"
 )
 
 func main() {
 	_ = godotenv.Load()
 
+	log := logger.New()
+	slog.SetDefault(log)
+
 	var provider handlers.GraphProvider
 
 	k8sClient, err := clients.NewK8sClient()
 	if err == nil {
-		log.Println("Successfully connected to Kubernetes. Using dynamic K8s graph builder.")
+		log.Info("Successfully connected to Kubernetes. Using dynamic K8s graph builder.")
 		builder := graph.NewK8sGraphBuilder(k8sClient, 5*time.Minute)
 		builder.StartBackgroundRefresher(context.Background())
 		provider = builder
 	} else {
-		log.Printf("Failed to connect to Kubernetes: %v. Falling back to default static graph.", err)
+		log.Warn("Failed to connect to Kubernetes. Falling back to default static graph.", "error", err)
 		provider = &defaultGraphProvider{g: graph.NewDefault()}
 	}
 
@@ -39,7 +43,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(requestLogger())
+	router.Use(structuredRequestLogger(log))
 	router.Use(handlers.PrometheusMiddleware())
 
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -62,19 +66,29 @@ func main() {
 		port = "8081"
 	}
 
-	fmt.Printf("🗺  IRONCLAD Topology service starting on port %s\n", port)
+	log.Info("IRONCLAD Topology service starting", "port", port)
 
 	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start topology server: %v", err)
+		log.Error("Failed to start topology server", "error", err)
+		os.Exit(1)
 	}
 }
 
-func requestLogger() gin.HandlerFunc {
+// structuredRequestLogger returns a Gin middleware that emits structured JSON logs.
+func structuredRequestLogger(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
-		log.Printf("[TOPOLOGY] %s %s %d %s",
-			c.Request.Method, c.Request.URL.Path, c.Writer.Status(), time.Since(start))
+		latency := time.Since(start)
+
+		log.Info("http request",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"status", c.Writer.Status(),
+			"latency_ms", latency.Milliseconds(),
+			"client_ip", c.ClientIP(),
+			"request_id", c.GetHeader("X-Request-ID"),
+		)
 	}
 }
 
@@ -85,3 +99,6 @@ type defaultGraphProvider struct {
 func (p *defaultGraphProvider) GetGraph(ctx context.Context) (*graph.DependencyGraph, error) {
 	return p.g, nil
 }
+
+// Ensure fmt is used
+var _ = fmt.Sprintf

@@ -14,13 +14,13 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
+	"golang.org/x/time/rate"
 )
-
-// WebhookHandler handles incoming webhooks from external systems like GitHub.
 type WebhookHandler struct {
 	svc           *services.DecisionService
 	githubClient  *clients.GitHubClient
 	webhookSecret []byte
+	rateLimiter   *rateLimiter
 }
 
 // NewWebhookHandler creates a new handler.
@@ -33,12 +33,13 @@ func NewWebhookHandler(svc *services.DecisionService) *WebhookHandler {
 		svc:           svc,
 		githubClient:  clients.NewGitHubClient(),
 		webhookSecret: []byte(secret),
+		rateLimiter:   NewRateLimiter(rate.Limit(10), 20), // 10 req/s, burst 20
 	}
 }
 
 // RegisterRoutes attaches webhook endpoints to the router group
 func (h *WebhookHandler) RegisterRoutes(rg *gin.RouterGroup) {
-	rg.POST("/webhooks/github", h.handleGitHubWebhook)
+	rg.POST("/webhooks/github", h.rateLimiter.Middleware(), h.handleGitHubWebhook)
 }
 
 // handleGitHubWebhook processes incoming GitHub PR/Push events.
