@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: IRONCLAD API
+  description: API documentation for the IRONCLAD security decision platform.
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: Gate API (Local)
+paths:
+  /api/v1/decision:
+    post:
+      summary: Evaluate a deployment
+      description: Orchestrates topology, semantic, and risk scoring to make a deployment decision.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentRequest'
+      responses:
+        '200':
+          description: Decision successfully evaluated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentDecision'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error or dependent service failure
+  /api/v1/webhooks/github:
+    post:
+      summary: GitHub Webhook receiver
+      description: Receives `pull_request` events from GitHub, evaluates the PR, and posts a comment back with the decision.
+      parameters:
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Hub-Signature-256
+          in: header
+          required: false
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the payload (required if GITHUB_WEBHOOK_SECRET is set)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object # GitHub webhook payload structure
+      responses:
+        '200':
+          description: Webhook processed or safely ignored
+        '401':
+          description: Missing or invalid signature
+        '429':
+          description: Rate limit exceeded (10 req/sec)
+  /api/v1/circuit-breaker/status:
+    get:
+      summary: Circuit breaker status
+      description: Returns the real-time status of all configured gobreaker circuit breakers in the gate service.
+      responses:
+        '200':
+          description: Circuit breaker status returned successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  circuit_breakers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        state:
+                          type: string
+                          enum: [closed, open, half-open]
+                        requests_total:
+                          type: integer
+                        successes:
+                          type: integer
+                        failures:
+                          type: integer
+                        consecutive_failures:
+                          type: integer
+                  total:
+                    type: integer
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  schemas:
+    DeploymentRequest:
+      type: object
+      required:
+        - commit_hash
+        - service
+        - branch
+        - changed_files
+      properties:
+        commit_hash:
+          type: string
+          example: "a1b2c3d4"
+        service:
+          type: string
+          example: "payment-api"
+        branch:
+          type: string
+          example: "feature/stripe-integration"
+        environment:
+          type: string
+          default: "staging"
+          example: "production"
+        author_email:
+          type: string
+          example: "dev@company.com"
+        changed_files:
+          type: array
+          items:
+            type: string
+          example: ["handlers/stripe.go", "models/payment.go"]
+    DeploymentDecision:
+      type: object
+      properties:
+        decision_id:
+          type: string
+          format: uuid
+        decision:
+          type: string
+          enum: [ALLOW, WARN, BLOCK]
+        intent:
+          type: string
+        intent_confidence:
+          type: number
+          format: float
+        risk_score:
+          type: number
+          format: float
+        explanation:
+          type: object
+          properties:
+            summary:
+              type: string
+            risk_factors:
+              type: array
+              items:
+                type: string
+        timestamp:
+          type: string
+          format: date-time
