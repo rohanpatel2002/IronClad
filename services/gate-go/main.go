@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -13,12 +13,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
 func main() {
 	// Load environment variables from .env if present
 	_ = godotenv.Load()
+
+	log := logger.New()
+	slog.SetDefault(log)
 
 	topologyURL := os.Getenv("TOPOLOGY_URL")
 	if topologyURL == "" {
@@ -39,7 +43,7 @@ func main() {
 	topologyClient := clients.NewTopologyClient(topologyURL)
 	semanticClient := clients.NewSemanticClient(semanticURL)
 	scoringClient := clients.NewScoringClient(scoringURL)
-	
+
 	var deployRepo services.DeploymentRepository
 	var riskRepo services.RiskScoreRepository
 
@@ -47,18 +51,20 @@ func main() {
 	if dbURL != "" {
 		db, err := sql.Open("postgres", dbURL)
 		if err != nil {
-			log.Fatalf("Failed to open database: %v", err)
+			log.Error("Failed to open database", "error", err)
+			os.Exit(1)
 		}
 		if err := db.Ping(); err != nil {
-			log.Fatalf("Failed to connect to database: %v", err)
+			log.Error("Failed to connect to database", "error", err)
+			os.Exit(1)
 		}
 		deployRepo = services.NewPostgresDeploymentRepository(db)
 		riskRepo = services.NewPostgresRiskScoreRepository(db)
-		log.Println("Connected to PostgreSQL for persistence")
+		log.Info("Connected to PostgreSQL for persistence")
 	} else {
 		deployRepo = services.NewNoopDeploymentRepository()
 		riskRepo = services.NewNoopRiskScoreRepository()
-		log.Println("Using in-memory no-op repositories (DATABASE_URL not set)")
+		log.Info("Using in-memory no-op repositories", "reason", "DATABASE_URL not set")
 	}
 
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
@@ -72,7 +78,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(requestLogger())
+	router.Use(structuredRequestLogger(log))
 	router.Use(handlers.PrometheusMiddleware())
 
 	// Prometheus metrics endpoint
@@ -99,27 +105,36 @@ func main() {
 		port = "8080"
 	}
 
-	fmt.Printf("🚀 IRONCLAD Gate service starting on port %s\n", port)
-	fmt.Printf("   Topology: %s\n", topologyURL)
-	fmt.Printf("   Semantic: %s\n", semanticURL)
-	fmt.Printf("   Scoring:  %s\n", scoringURL)
+	log.Info("IRONCLAD Gate service starting",
+		"port", port,
+		"topology_url", topologyURL,
+		"semantic_url", semanticURL,
+		"scoring_url", scoringURL,
+	)
 
 	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		log.Error("Failed to start server", "error", err)
+		os.Exit(1)
 	}
 }
 
-// requestLogger returns a Gin middleware that logs each request with timing
-func requestLogger() gin.HandlerFunc {
+// structuredRequestLogger returns a Gin middleware that emits structured JSON logs.
+func structuredRequestLogger(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
 		latency := time.Since(start)
-		log.Printf("[GATE] %s %s %d %s",
-			c.Request.Method,
-			c.Request.URL.Path,
-			c.Writer.Status(),
-			latency,
+
+		log.Info("http request",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"status", c.Writer.Status(),
+			"latency_ms", latency.Milliseconds(),
+			"client_ip", c.ClientIP(),
+			"request_id", c.GetHeader("X-Request-ID"),
 		)
 	}
 }
+
+// Ensure fmt is used
+var _ = fmt.Sprintf
