@@ -92,6 +92,7 @@ func main() {
 	v1 := router.Group("/api/v1")
 	decisionHandler.RegisterRoutes(v1)
 	webhookHandler.RegisterRoutes(v1)
+	v1.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {
