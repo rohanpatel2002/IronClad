@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+rule_files: []
+
+scrape_configs:
+  - job_name: 'ironclad-gate'
+    static_configs:
+      - targets: ['gate:8080']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'gate-go'
+
+  - job_name: 'ironclad-topology'
+    static_configs:
+      - targets: ['topology:8081']
+    metrics_path: /metrics
+    scrape_interval: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'topology-go'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
