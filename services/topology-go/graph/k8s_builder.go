@@ -3,7 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -39,7 +39,7 @@ func (b *K8sGraphBuilder) GetGraph(ctx context.Context) (*DependencyGraph, error
 		err := b.refresh(ctx)
 		if err != nil {
 			// If refresh fails, return the stale graph and log an error
-			log.Printf("[K8sGraphBuilder] Failed to refresh topology: %v. Using stale cache.", err)
+			slog.Warn("Failed to refresh topology. Using stale cache.", "error", err)
 			
 			// If we have no graph at all, we must return the error
 			b.mu.RLock()
@@ -84,7 +84,7 @@ func (b *K8sGraphBuilder) refresh(ctx context.Context) error {
 	b.graph = newGraph
 	b.lastUpdate = time.Now()
 	
-	log.Printf("[K8sGraphBuilder] Topology refreshed successfully from K8s. %d services loaded.", len(metadataList))
+	slog.Info("Topology refreshed successfully from K8s", "service_count", len(metadataList))
 	return nil
 }
 
