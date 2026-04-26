@@ -78,6 +78,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(handlers.RequestIDMiddleware())
 	router.Use(structuredRequestLogger(log))
 	router.Use(handlers.PrometheusMiddleware())
 
