@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/auth"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
@@ -70,6 +71,7 @@ func main() {
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
 	webhookHandler := handlers.NewWebhookHandler(decisionSvc)
+	jwtManager := auth.NewJWTManager()
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -99,7 +101,10 @@ func main() {
 	v1 := router.Group("/api/v1")
 	decisionHandler.RegisterRoutes(v1)
 	webhookHandler.RegisterRoutes(v1)
-	v1.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
+
+	// Protected management routes
+	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager))
+	mgmt.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {
