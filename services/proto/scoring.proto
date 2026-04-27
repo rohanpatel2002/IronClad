@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package ironclad.scoring.v1;
+
+option go_package = "github.com/rohanpatel2002/ironclad/services/gate-go/pkg/pb/scoring";
+
+service ScoringService {
+  rpc ScoreDeployment(ScoreRequest) returns (ScoreResponse) {}
+}
+
+message ScoreRequest {
+  string service = 1;
+  string commit_hash = 2;
+  double blast_radius = 3;
+  repeated string changed_files = 4;
+  string environment = 5;
+  double service_criticality = 6;
+  string intent = 7;
+}
+
+message ScoreResponse {
+  double blast_radius_score = 1;
+  double reversibility_score = 2;
+  double timing_risk_score = 3;
+  double confidence = 4;
+  repeated string factors = 5;
+}
