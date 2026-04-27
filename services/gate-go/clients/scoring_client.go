@@ -13,6 +13,7 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/retry"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 	"github.com/sony/gobreaker"
+	"os"
 )
 
 // ScoringClient computes 3-axis risk scores either via the scoring-python
@@ -91,6 +92,9 @@ func (s *ScoringClient) callRemoteScorer(ctx context.Context, req *services.Scor
 		return nil, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if key := os.Getenv("INTERNAL_API_KEY"); key != "" {
+		httpReq.Header.Set("X-Internal-API-Key", key)
+	}
 
 	respInterface, err := retry.DoWithExponentialBackoff(ctx, 3, 100*time.Millisecond, 2*time.Second, func() (interface{}, error) {
 		return s.cb.Execute(func() (interface{}, error) {
