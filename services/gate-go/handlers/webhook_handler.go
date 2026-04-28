@@ -15,25 +15,30 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 	"golang.org/x/time/rate"
+	"strings"
 )
 type WebhookHandler struct {
-	svc           *services.DecisionService
-	githubClient  *clients.GitHubClient
-	webhookSecret []byte
-	rateLimiter   *rateLimiter
+	svc            *services.DecisionService
+	githubClient   *clients.GitHubClient
+	webhookSecrets [][]byte
+	rateLimiter    *rateLimiter
 }
 
 // NewWebhookHandler creates a new handler.
 func NewWebhookHandler(svc *services.DecisionService) *WebhookHandler {
-	secret := os.Getenv("GITHUB_WEBHOOK_SECRET")
-	if secret == "" {
-		// Log warning, but proceed (useful for local dev without secrets)
+	secretStr := os.Getenv("GITHUB_WEBHOOK_SECRET")
+	var secrets [][]byte
+	if secretStr != "" {
+		for _, s := range strings.Split(secretStr, ",") {
+			secrets = append(secrets, []byte(strings.TrimSpace(s)))
+		}
 	}
+
 	return &WebhookHandler{
-		svc:           svc,
-		githubClient:  clients.NewGitHubClient(),
-		webhookSecret: []byte(secret),
-		rateLimiter:   NewRateLimiter(rate.Limit(10), 20), // 10 req/s, burst 20
+		svc:            svc,
+		githubClient:   clients.NewGitHubClient(),
+		webhookSecrets: secrets,
+		rateLimiter:    NewRateLimiter(rate.Limit(10), 20), // 10 req/s, burst 20
 	}
 }
 
@@ -44,8 +49,8 @@ func (h *WebhookHandler) RegisterRoutes(rg *gin.RouterGroup) {
 
 // handleGitHubWebhook processes incoming GitHub PR/Push events.
 func (h *WebhookHandler) handleGitHubWebhook(c *gin.Context) {
-	// 1. Verify HMAC signature if a secret is configured
-	if len(h.webhookSecret) > 0 {
+	// 1. Verify HMAC signature if secrets are configured
+	if len(h.webhookSecrets) > 0 {
 		signature := c.GetHeader("X-Hub-Signature-256")
 		if signature == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing X-Hub-Signature-256"})
@@ -58,8 +63,16 @@ func (h *WebhookHandler) handleGitHubWebhook(c *gin.Context) {
 			return
 		}
 
-		// Validate signature
-		if !h.verifySignature(signature, bodyBytes) {
+		// Validate signature against all configured secrets (rotation support)
+		valid := false
+		for _, secret := range h.webhookSecrets {
+			if h.verifySignatureWithSecret(signature, bodyBytes, secret) {
+				valid = true
+				break
+			}
+		}
+
+		if !valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
 			return
 		}
@@ -149,20 +162,20 @@ func formatList(items []string) string {
 	return res
 }
 
-// verifySignature checks the SHA-256 HMAC of the payload against the GitHub signature.
-func (h *WebhookHandler) verifySignature(signature string, payload []byte) bool {
+// verifySignatureWithSecret checks the SHA-256 HMAC of the payload against the GitHub signature using a specific secret.
+func (h *WebhookHandler) verifySignatureWithSecret(signature string, payload []byte, secret []byte) bool {
 	const signaturePrefix = "sha256="
-	
+
 	if len(signature) < len(signaturePrefix) || signature[:len(signaturePrefix)] != signaturePrefix {
 		return false
 	}
 
-	mac := hmac.New(sha256.New, h.webhookSecret)
+	mac := hmac.New(sha256.New, secret)
 	mac.Write(payload)
 	expectedMAC := mac.Sum(nil)
 	expectedSignature := hex.EncodeToString(expectedMAC)
 
 	actualSignature := signature[len(signaturePrefix):]
-	
+
 	return hmac.Equal([]byte(expectedSignature), []byte(actualSignature))
 }
