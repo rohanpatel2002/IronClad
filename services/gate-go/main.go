@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -11,10 +12,13 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/auth"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/tracing"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
@@ -24,6 +28,18 @@ func main() {
 
 	log := logger.New()
 	slog.SetDefault(log)
+
+	// Init Tracing
+	tp, err := tracing.InitTracer("gate-go")
+	if err != nil {
+		log.Error("Failed to initialize tracer", "error", err)
+	} else {
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				log.Error("Failed to shutdown tracer", "error", err)
+			}
+		}()
+	}
 
 	topologyURL := os.Getenv("TOPOLOGY_URL")
 	if topologyURL == "" {
@@ -84,6 +100,9 @@ func main() {
 	router.Use(handlers.RequestIDMiddleware())
 	router.Use(structuredRequestLogger(log))
 	router.Use(handlers.PrometheusMiddleware())
+	if tp != nil {
+		router.Use(otelgin.Middleware("gate-go"))
+	}
 
 	// Prometheus metrics endpoint
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
