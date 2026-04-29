@@ -19,6 +19,15 @@ services:
       timeout: 5s
       retries: 5
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: ironclad-jaeger
+    ports:
+      - "16686:16686" # Web UI
+      - "4318:4318"   # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
   topology-go:
     build:
       context: ../../services/topology-go
@@ -29,6 +38,9 @@ services:
     environment:
       TOPOLOGY_PORT: "8081"
       GIN_MODE: release
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
+    depends_on:
+      - jaeger
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8081/health || exit 1"]
       interval: 10s
@@ -85,6 +97,7 @@ services:
       SCORING_URL: "http://scoring-python:8083"
       SEMANTIC_URL: "http://semantic-python:8082"
       DATABASE_URL: "postgres://ironclad:ironclad_dev@postgres:5432/ironclad"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,6 +107,8 @@ services:
         condition: service_healthy
       semantic-python:
         condition: service_healthy
+      jaeger:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
       interval: 10s
@@ -137,3 +152,4 @@ services:
 volumes:
   pgdata:
   grafdata:
+
