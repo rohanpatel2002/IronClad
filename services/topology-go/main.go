@@ -10,10 +10,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
 	"github.com/rohanpatel2002/ironclad/services/topology-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/topology-go/graph"
 	"github.com/rohanpatel2002/ironclad/services/topology-go/handlers"
 	"github.com/rohanpatel2002/ironclad/services/topology-go/pkg/logger"
+	"github.com/rohanpatel2002/ironclad/services/topology-go/pkg/tracing"
 )
 
 func main() {
@@ -21,6 +24,18 @@ func main() {
 
 	log := logger.New()
 	slog.SetDefault(log)
+
+	// Init Tracing
+	tp, err := tracing.InitTracer("topology-go")
+	if err != nil {
+		log.Error("Failed to initialize tracer", "error", err)
+	} else {
+		defer func() {
+			if err := tp.Shutdown(context.Background()); err != nil {
+				log.Error("Failed to shutdown tracer", "error", err)
+			}
+		}()
+	}
 
 	var provider handlers.GraphProvider
 
@@ -45,6 +60,9 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(structuredRequestLogger(log))
 	router.Use(handlers.PrometheusMiddleware())
+	if tp != nil {
+		router.Use(otelgin.Middleware("topology-go"))
+	}
 
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
