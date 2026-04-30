@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -131,17 +134,37 @@ func main() {
 		port = "8080"
 	}
 
-	log.Info("IRONCLAD Gate service starting",
-		"port", port,
-		"topology_url", topologyURL,
-		"semantic_url", semanticURL,
-		"scoring_url", scoringURL,
-	)
-
-	if err := router.Run(":" + port); err != nil {
-		log.Error("Failed to start server", "error", err)
-		os.Exit(1)
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: router,
 	}
+
+	go func() {
+		log.Info("IRONCLAD Gate service starting",
+			"port", port,
+			"topology_url", topologyURL,
+			"semantic_url", semanticURL,
+			"scoring_url", scoringURL,
+		)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("Failed to start server", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("Server forced to shutdown", "error", err)
+	}
+
+	log.Info("Server exiting")
 }
 
 // structuredRequestLogger returns a Gin middleware that emits structured JSON logs.
