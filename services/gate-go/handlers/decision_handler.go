@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	apperrors "github.com/rohanpatel2002/ironclad/services/gate-go/pkg/errors"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
@@ -57,19 +58,13 @@ func (h *DecisionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 func (h *DecisionHandler) handleDecision(c *gin.Context) {
 	var req models.DeploymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_request",
-			"message": err.Error(),
-		})
+		apperrors.Respond(c, apperrors.New(http.StatusBadRequest, apperrors.ErrInvalidRequest, err.Error()))
 		return
 	}
 
 	decision, err := h.svc.EvaluateDeployment(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "evaluation_failed",
-			"message": err.Error(),
-		})
+		apperrors.Respond(c, apperrors.New(http.StatusInternalServerError, apperrors.ErrInternal, err.Error()))
 		return
 	}
 
@@ -86,10 +81,7 @@ func (h *DecisionHandler) handleGetDecision(c *gin.Context) {
 	id := c.Param("id")
 	d, ok := h.store.get(id)
 	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "not_found",
-			"message": "Decision ID not found. Decisions are cached in-memory; restart will clear history.",
-		})
+		apperrors.Respond(c, apperrors.New(http.StatusNotFound, apperrors.ErrNotFound, "Decision ID not found"))
 		return
 	}
 	c.JSON(http.StatusOK, d)
