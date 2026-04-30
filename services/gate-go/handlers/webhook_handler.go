@@ -9,13 +9,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 	"golang.org/x/time/rate"
-	"strings"
 )
 type WebhookHandler struct {
 	svc            *services.DecisionService
@@ -25,7 +26,7 @@ type WebhookHandler struct {
 }
 
 // NewWebhookHandler creates a new handler.
-func NewWebhookHandler(svc *services.DecisionService) *WebhookHandler {
+func NewWebhookHandler(svc *services.DecisionService, redisClient *redis.Client) *WebhookHandler {
 	secretStr := os.Getenv("GITHUB_WEBHOOK_SECRET")
 	var secrets [][]byte
 	if secretStr != "" {
@@ -38,7 +39,7 @@ func NewWebhookHandler(svc *services.DecisionService) *WebhookHandler {
 		svc:            svc,
 		githubClient:   clients.NewGitHubClient(),
 		webhookSecrets: secrets,
-		rateLimiter:    NewRateLimiter(rate.Limit(10), 20), // 10 req/s, burst 20
+		rateLimiter:    NewRateLimiter(rate.Limit(10), 20, redisClient), // 10 req/s, burst 20
 	}
 }
 

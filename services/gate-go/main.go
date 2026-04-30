@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -42,6 +43,24 @@ func main() {
 				log.Error("Failed to shutdown tracer", "error", err)
 			}
 		}()
+	}
+
+	// Init Redis
+	var redisClient *redis.Client
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL != "" {
+		opt, err := redis.ParseURL(redisURL)
+		if err != nil {
+			log.Error("Failed to parse REDIS_URL", "error", err)
+		} else {
+			redisClient = redis.NewClient(opt)
+			if err := redisClient.Ping(context.Background()).Err(); err != nil {
+				log.Error("Failed to connect to Redis", "error", err)
+				redisClient = nil
+			} else {
+				log.Info("Connected to Redis for distributed rate limiting")
+			}
+		}
 	}
 
 	topologyURL := os.Getenv("TOPOLOGY_URL")
@@ -89,7 +108,7 @@ func main() {
 
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
-	webhookHandler := handlers.NewWebhookHandler(decisionSvc)
+	webhookHandler := handlers.NewWebhookHandler(decisionSvc, redisClient)
 	jwtManager := auth.NewJWTManager()
 
 	// Configure Gin
