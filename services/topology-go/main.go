@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -84,12 +87,32 @@ func main() {
 		port = "8081"
 	}
 
-	log.Info("IRONCLAD Topology service starting", "port", port)
-
-	if err := router.Run(":" + port); err != nil {
-		log.Error("Failed to start topology server", "error", err)
-		os.Exit(1)
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: router,
 	}
+
+	go func() {
+		log.Info("IRONCLAD Topology service starting", "port", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("Failed to start topology server", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Info("Shutting down topology server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("Topology server forced to shutdown", "error", err)
+	}
+
+	log.Info("Topology server exiting")
 }
 
 // structuredRequestLogger returns a Gin middleware that emits structured JSON logs.
