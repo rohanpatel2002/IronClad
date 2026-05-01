@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -161,6 +162,20 @@ func main() {
 	// Protected management routes
 	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager))
 	mgmt.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
+	
+	// Expose pprof on a separate group or within mgmt
+	debug := mgmt.Group("/debug/pprof")
+	debug.GET("/", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/cmdline", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/profile", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/symbol", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/trace", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/allocs", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/block", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/goroutine", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/heap", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/mutex", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/threadcreate", gin.WrapH(http.DefaultServeMux))
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {
