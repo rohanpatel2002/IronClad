@@ -3,6 +3,7 @@ package clients
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -24,17 +25,23 @@ type ScoringClient struct {
 	cb         *gobreaker.CircuitBreaker
 }
 
-// NewScoringClient creates a new scoring client with sensible timeouts.
-func NewScoringClient(url string) *ScoringClient {
+// NewScoringClient creates a new scoring client with sensible timeouts and optional mTLS.
+func NewScoringClient(url string, tlsConfig *tls.Config) *ScoringClient {
 	st := gobreaker.Settings{
 		Name:        "ScoringClient",
 		MaxRequests: 3,
 		Interval:    5 * time.Second,
 		Timeout:     10 * time.Second,
 	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if tlsConfig != nil {
+		transport.TLSClientConfig = tlsConfig
+	}
+
 	return &ScoringClient{
 		scoringURL: url,
-		httpClient: &http.Client{Timeout: 3 * time.Second},
+		httpClient: &http.Client{Timeout: 3 * time.Second, Transport: transport},
 		cb:         gobreaker.NewCircuitBreaker(st),
 	}
 }

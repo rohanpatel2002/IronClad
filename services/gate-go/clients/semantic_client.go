@@ -3,6 +3,7 @@ package clients
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,17 +21,23 @@ type SemanticClient struct {
 	cb          *gobreaker.CircuitBreaker
 }
 
-// NewSemanticClient creates a new semantic client.
-func NewSemanticClient(url string) *SemanticClient {
+// NewSemanticClient creates a new semantic client with optional mTLS.
+func NewSemanticClient(url string, tlsConfig *tls.Config) *SemanticClient {
 	st := gobreaker.Settings{
 		Name:        "SemanticClient",
 		MaxRequests: 3,
 		Interval:    5 * time.Second,
 		Timeout:     10 * time.Second,
 	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if tlsConfig != nil {
+		transport.TLSClientConfig = tlsConfig
+	}
+
 	return &SemanticClient{
 		semanticURL: url,
-		httpClient:  &http.Client{Timeout: 5 * time.Second},
+		httpClient:  &http.Client{Timeout: 5 * time.Second, Transport: transport},
 		cb:          gobreaker.NewCircuitBreaker(st),
 	}
 }
