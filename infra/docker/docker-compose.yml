@@ -30,6 +30,24 @@ services:
       timeout: 5s
       retries: 5
 
+  opa:
+    image: openpolicyagent/opa:0.64.1-static
+    container_name: ironclad-opa
+    ports:
+      - "8181:8181"
+    volumes:
+      - ../opa:/etc/opa
+    command:
+      - "run"
+      - "--server"
+      - "--log-level=debug"
+      - "/etc/opa/policy.rego"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8181/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   jaeger:
     image: jaegertracing/all-in-one:1.56
     container_name: ironclad-jaeger
@@ -109,6 +127,7 @@ services:
       SEMANTIC_URL: "http://semantic-python:8082"
       DATABASE_URL: "postgres://ironclad:ironclad_dev@postgres:5432/ironclad"
       REDIS_URL: "redis://redis:6379"
+      OPA_URL: "http://opa:8181/v1/data/ironclad/authz/allow"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     depends_on:
       postgres:
@@ -120,6 +139,8 @@ services:
       semantic-python:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      opa:
         condition: service_healthy
       jaeger:
         condition: service_started

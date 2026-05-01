@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,6 +23,7 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/auth"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/mtls"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/tracing"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
@@ -43,6 +45,19 @@ func main() {
 				log.Error("Failed to shutdown tracer", "error", err)
 			}
 		}()
+	}
+
+	// Init mTLS Config
+	tlsCfg, err := mtls.LoadTLSConfig(mtls.Config{
+		CACertFile: os.Getenv("MTLS_CA_CERT"),
+		CertFile:   os.Getenv("MTLS_CERT"),
+		KeyFile:    os.Getenv("MTLS_KEY"),
+		ServerName: os.Getenv("MTLS_SERVER_NAME"),
+	})
+	if err != nil {
+		log.Warn("Failed to load mTLS config, proceeding with insecure communication", "error", err)
+	} else if tlsCfg != nil {
+		log.Info("mTLS enabled for microservice communication")
 	}
 
 	// Init Redis
@@ -79,9 +94,9 @@ func main() {
 	}
 
 	// Wire dependencies
-	topologyClient := clients.NewTopologyClient(topologyURL)
-	semanticClient := clients.NewSemanticClient(semanticURL)
-	scoringClient := clients.NewScoringClient(scoringURL)
+	topologyClient := clients.NewTopologyClient(topologyURL, tlsCfg)
+	semanticClient := clients.NewSemanticClient(semanticURL, tlsCfg)
+	scoringClient := clients.NewScoringClient(scoringURL, tlsCfg)
 
 	var deployRepo services.DeploymentRepository
 	var riskRepo services.RiskScoreRepository
@@ -147,6 +162,20 @@ func main() {
 	// Protected management routes
 	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager))
 	mgmt.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
+	
+	// Expose pprof on a separate group or within mgmt
+	debug := mgmt.Group("/debug/pprof")
+	debug.GET("/", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/cmdline", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/profile", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/symbol", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/trace", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/allocs", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/block", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/goroutine", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/heap", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/mutex", gin.WrapH(http.DefaultServeMux))
+	debug.GET("/threadcreate", gin.WrapH(http.DefaultServeMux))
 
 	port := os.Getenv("GATE_PORT")
 	if port == "" {

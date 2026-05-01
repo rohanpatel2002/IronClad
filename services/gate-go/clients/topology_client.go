@@ -3,6 +3,7 @@ package clients
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,17 +20,23 @@ type TopologyClient struct {
 	cb          *gobreaker.CircuitBreaker
 }
 
-// NewTopologyClient creates a new topology client.
-func NewTopologyClient(url string) *TopologyClient {
+// NewTopologyClient creates a new topology client with optional mTLS.
+func NewTopologyClient(url string, tlsConfig *tls.Config) *TopologyClient {
 	st := gobreaker.Settings{
 		Name:        "TopologyClient",
 		MaxRequests: 3,
 		Interval:    5 * time.Second,
 		Timeout:     10 * time.Second,
 	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if tlsConfig != nil {
+		transport.TLSClientConfig = tlsConfig
+	}
+
 	return &TopologyClient{
 		topologyURL: url,
-		httpClient:  &http.Client{Timeout: 3 * time.Second},
+		httpClient:  &http.Client{Timeout: 3 * time.Second, Transport: transport},
 		cb:          gobreaker.NewCircuitBreaker(st),
 	}
 }

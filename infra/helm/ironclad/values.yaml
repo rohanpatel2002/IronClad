@@ -1,0 +1,39 @@
+global:
+  environment: production
+
+gate:
+  replicaCount: 3
+  image:
+    repository: ironclad/gate-go
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+topology:
+  replicaCount: 2
+  image:
+    repository: ironclad/topology-go
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8081
+
+# Subcharts
+postgresql:
+  enabled: true
+  auth:
+    database: ironclad
+    username: ironclad
+    password: ironclad_dev
+
+redis:
+  enabled: true
+  architecture: standalone
