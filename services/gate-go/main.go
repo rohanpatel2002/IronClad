@@ -102,6 +102,8 @@ func main() {
 	var riskRepo services.RiskScoreRepository
 
 	dbURL := os.Getenv("DATABASE_URL")
+	replicaURL := os.Getenv("DATABASE_REPLICA_URL")
+
 	if dbURL != "" {
 		db, err := sql.Open("postgres", dbURL)
 		if err != nil {
@@ -112,9 +114,21 @@ func main() {
 			log.Error("Failed to connect to database", "error", err)
 			os.Exit(1)
 		}
-		deployRepo = services.NewPostgresDeploymentRepository(db)
-		riskRepo = services.NewPostgresRiskScoreRepository(db)
-		log.Info("Connected to PostgreSQL for persistence")
+
+		var dbReplica *sql.DB
+		if replicaURL != "" {
+			dbReplica, err = sql.Open("postgres", replicaURL)
+			if err != nil {
+				log.Warn("Failed to open replica database, falling back to master", "error", err)
+			} else if err := dbReplica.Ping(); err != nil {
+				log.Warn("Failed to connect to replica database, falling back to master", "error", err)
+				dbReplica = nil
+			}
+		}
+
+		deployRepo = services.NewPostgresDeploymentRepository(db, dbReplica)
+		riskRepo = services.NewPostgresRiskScoreRepository(db, dbReplica)
+		log.Info("Connected to PostgreSQL for persistence (read-splitting enabled)")
 	} else {
 		deployRepo = services.NewNoopDeploymentRepository()
 		riskRepo = services.NewNoopRiskScoreRepository()

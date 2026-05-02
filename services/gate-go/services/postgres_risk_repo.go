@@ -8,14 +8,18 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 )
 
-// PostgresRiskScoreRepository implements RiskScoreRepository using PostgreSQL.
+// PostgresRiskScoreRepository implements RiskScoreRepository using PostgreSQL with read splitting.
 type PostgresRiskScoreRepository struct {
-	db *sql.DB
+	master  *sql.DB
+	replica *sql.DB
 }
 
-// NewPostgresRiskScoreRepository creates a new Postgres risk score repo.
-func NewPostgresRiskScoreRepository(db *sql.DB) *PostgresRiskScoreRepository {
-	return &PostgresRiskScoreRepository{db: db}
+// NewPostgresRiskScoreRepository creates a new Postgres risk score repo with read splitting.
+func NewPostgresRiskScoreRepository(master, replica *sql.DB) *PostgresRiskScoreRepository {
+	if replica == nil {
+		replica = master
+	}
+	return &PostgresRiskScoreRepository{master: master, replica: replica}
 }
 
 // Store saves a new risk score record into the risk_scores table.
@@ -28,7 +32,7 @@ func (r *PostgresRiskScoreRepository) Store(ctx context.Context, record *models.
 			$1, $2, $3, $4, $5, $6, $7
 		)
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.master.ExecContext(ctx, query,
 		record.ID, record.DeploymentID, record.BlastRadius, record.Reversibility,
 		record.TimingRisk, record.FinalDecision, record.ComputedAt,
 	)
