@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// Wire dependencies
-	topologyClient := clients.NewTopologyClient(topologyURL, tlsCfg)
+	topologyClient := clients.NewTopologyClient(topologyURL, tlsCfg, redisClient)
 	semanticClient := clients.NewSemanticClient(semanticURL, tlsCfg)
 	scoringClient := clients.NewScoringClient(scoringURL, tlsCfg)
 
