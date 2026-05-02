@@ -9,6 +9,18 @@ gate:
   service:
     type: ClusterIP
     port: 8080
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 5
   resources:
     limits:
       cpu: 500m
@@ -25,6 +37,18 @@ topology:
   service:
     type: ClusterIP
     port: 8081
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8081
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8081
+    initialDelaySeconds: 5
+    periodSeconds: 5
 
 # Subcharts
 postgresql:

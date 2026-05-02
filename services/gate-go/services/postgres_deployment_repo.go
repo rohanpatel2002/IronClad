@@ -8,14 +8,18 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 )
 
-// PostgresDeploymentRepository implements DeploymentRepository using PostgreSQL.
+// PostgresDeploymentRepository implements DeploymentRepository using PostgreSQL with read splitting.
 type PostgresDeploymentRepository struct {
-	db *sql.DB
+	master  *sql.DB
+	replica *sql.DB
 }
 
-// NewPostgresDeploymentRepository creates a new Postgres deployment repo.
-func NewPostgresDeploymentRepository(db *sql.DB) *PostgresDeploymentRepository {
-	return &PostgresDeploymentRepository{db: db}
+// NewPostgresDeploymentRepository creates a new Postgres deployment repo with read splitting.
+func NewPostgresDeploymentRepository(master, replica *sql.DB) *PostgresDeploymentRepository {
+	if replica == nil {
+		replica = master
+	}
+	return &PostgresDeploymentRepository{master: master, replica: replica}
 }
 
 // Store saves a new deployment record into the deployments table.
@@ -31,7 +35,7 @@ func (r *PostgresDeploymentRepository) Store(ctx context.Context, record *models
 			$11, $12, $13
 		)
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.master.ExecContext(ctx, query,
 		record.ID, record.DeployTimestamp, record.CommitHash, record.Branch, record.ServiceName,
 		record.AuthorEmail, record.DiffSummary, record.SemanticIntent, record.DecisionStatus, record.DecisionTime,
 		record.Explanation, record.CreatedAt, record.UpdatedAt,
@@ -52,7 +56,7 @@ func (r *PostgresDeploymentRepository) Get(ctx context.Context, id string) (*mod
 		FROM deployments
 		WHERE id = $1
 	`
-	row := r.db.QueryRowContext(ctx, query, id)
+	row := r.replica.QueryRowContext(ctx, query, id)
 
 	var rec models.DeploymentRecord
 	// diff_summary, semantic_intent, and explanation can be null in the DB, so we use sql.NullString
