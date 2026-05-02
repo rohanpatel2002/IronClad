@@ -19,6 +19,19 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres-replica:
+    image: postgres:16-alpine
+    container_name: ironclad-postgres-replica
+    environment:
+      POSTGRES_USER: ironclad
+      POSTGRES_PASSWORD: ironclad_dev
+      POSTGRES_DB: ironclad
+    ports:
+      - "5433:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   redis:
     image: redis:7-alpine
     container_name: ironclad-redis
