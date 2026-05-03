@@ -1,0 +1,42 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Gate Decision Status (ALLOW vs BLOCK)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum by (decision) (rate(gate_decisions_total[5m]))" }
+      ]
+    },
+    {
+      "title": "P95 Decision Latency",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))" }
+      ]
+    },
+    {
+      "title": "Top Impacted Services (Blast Radius)",
+      "type": "barplot",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "topk(5, sum by (impacted_service) (blast_radius_impact_total))" }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["ironclad", "security"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "IRONCLAD Security Platform - Executive KPIs"
+}
