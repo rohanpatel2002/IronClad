@@ -1,0 +1,67 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gate-policy
+  namespace: ironclad
+spec:
+  podSelector:
+    matchLabels:
+      app: gate
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: topology
+    - podSelector:
+        matchLabels:
+          app: scoring
+    - podSelector:
+        matchLabels:
+          app: semantic
+    - podSelector:
+        matchLabels:
+          app: postgres
+    - podSelector:
+        matchLabels:
+          app: redis
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: internal-service-policy
+  namespace: ironclad
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [topology, scoring, semantic]}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: gate
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    - podSelector:
+        matchLabels:
+          app: redis
+    - podSelector:
+        matchLabels:
+          app: rabbitmq

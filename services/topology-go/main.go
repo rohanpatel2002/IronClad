@@ -69,14 +69,27 @@ func main() {
 
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Health check
+	// Health check with downstream verification
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":    "healthy",
+		status := "healthy"
+		details := gin.H{
 			"service":   "topology-go",
 			"timestamp": time.Now().UTC(),
 			"version":   "0.1.0",
-		})
+		}
+
+		// Verify provider health
+		if _, err := provider.GetGraph(c.Request.Context()); err != nil {
+			status = "unhealthy"
+			details["error"] = err.Error()
+		}
+
+		details["status"] = status
+		code := http.StatusOK
+		if status != "healthy" {
+			code = http.StatusServiceUnavailable
+		}
+		c.JSON(code, details)
 	})
 
 	v1 := router.Group("/api/v1")

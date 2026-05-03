@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	apperrors "github.com/rohanpatel2002/ironclad/services/gate-go/pkg/errors"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/audit"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
 
@@ -15,6 +16,7 @@ import (
 type DecisionHandler struct {
 	svc   *services.DecisionService
 	store *decisionStore
+	audit *audit.AuditLogger
 }
 
 // decisionStore is a thread-safe in-memory cache for recent decisions
@@ -40,9 +42,9 @@ func (s *decisionStore) get(id string) (*models.DeploymentDecision, bool) {
 	return d, ok
 }
 
-// NewDecisionHandler creates a new handler with the given service
-func NewDecisionHandler(svc *services.DecisionService) *DecisionHandler {
-	return &DecisionHandler{svc: svc, store: newDecisionStore()}
+// NewDecisionHandler creates a new handler with the given service and audit logger.
+func NewDecisionHandler(svc *services.DecisionService, auditLogger *audit.AuditLogger) *DecisionHandler {
+	return &DecisionHandler{svc: svc, store: newDecisionStore(), audit: auditLogger}
 }
 
 // RegisterRoutes attaches decision endpoints to the router group
@@ -70,6 +72,24 @@ func (h *DecisionHandler) handleDecision(c *gin.Context) {
 
 	h.store.save(decision)
 	RecordDecisionMetric(string(decision.Decision))
+
+	// Record Audit Log
+	h.audit.Log(c.Request.Context(), audit.LogRecord{
+		TenantID:      c.GetString("tenant_id"),
+		Actor:         c.GetString("user"),
+		Action:        "deploy_request",
+		ResourceType:  "deployment",
+		ResourceID:    decision.DecisionID,
+		Status:        string(decision.Decision),
+		Details: map[string]interface{}{
+			"service": req.Service,
+			"branch":  req.Branch,
+			"commit":  req.CommitHash,
+		},
+		IPAddress:     c.ClientIP(),
+		UserAgent:     c.Request.UserAgent(),
+		CorrelationID: c.GetHeader("X-Correlation-ID"),
+	})
 
 	c.JSON(http.StatusOK, decision)
 }
