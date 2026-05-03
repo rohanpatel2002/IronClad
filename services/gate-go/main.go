@@ -21,6 +21,7 @@ import (
 
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/audit"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/auth"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/mtls"
@@ -100,6 +101,7 @@ func main() {
 
 	var deployRepo services.DeploymentRepository
 	var riskRepo services.RiskScoreRepository
+	var auditLogger *audit.AuditLogger
 
 	dbURL := os.Getenv("DATABASE_URL")
 	replicaURL := os.Getenv("DATABASE_REPLICA_URL")
@@ -128,15 +130,17 @@ func main() {
 
 		deployRepo = services.NewPostgresDeploymentRepository(db, dbReplica)
 		riskRepo = services.NewPostgresRiskScoreRepository(db, dbReplica)
+		auditLogger = audit.NewAuditLogger(db)
 		log.Info("Connected to PostgreSQL for persistence (read-splitting enabled)")
 	} else {
 		deployRepo = services.NewNoopDeploymentRepository()
 		riskRepo = services.NewNoopRiskScoreRepository()
+		auditLogger = audit.NewAuditLogger(nil)
 		log.Info("Using in-memory no-op repositories", "reason", "DATABASE_URL not set")
 	}
 
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
-	decisionHandler := handlers.NewDecisionHandler(decisionSvc)
+	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger)
 	webhookHandler := handlers.NewWebhookHandler(decisionSvc, redisClient)
 	jwtManager := auth.NewJWTManager()
 
