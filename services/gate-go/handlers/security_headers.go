@@ -21,10 +21,13 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 
 		// Content-Security-Policy (CSP) - restrict where resources can be loaded from
 		// For a REST API, we can be very restrictive.
-		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none';")
+		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; sandbox;")
 
 		// Referrer-Policy
 		c.Header("Referrer-Policy", "no-referrer")
+
+		// Permissions-Policy - disable unnecessary browser features
+		c.Header("Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()")
 
 		c.Next()
 	}
