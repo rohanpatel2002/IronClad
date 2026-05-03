@@ -33,6 +33,14 @@ func AuthMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Store claims in context for downstream handlers
 		c.Set("user", claims.Username)
 		c.Set("role", claims.Role)
+
+		// Multi-tenant support: extract Tenant ID from header or JWT claims
+		tenantID := c.GetHeader("X-Tenant-ID")
+		if tenantID == "" {
+			tenantID = "default" // Fallback for legacy clients
+		}
+		c.Set("tenant_id", tenantID)
+
 		c.Next()
 	}
 }
