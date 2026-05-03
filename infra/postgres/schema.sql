@@ -89,3 +89,23 @@ CREATE TABLE decision_explanations (
     suggested_safe_window TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Audit logs: structured security-critical actions
+CREATE TABLE audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+    tenant_id VARCHAR(255) NOT NULL DEFAULT 'default',
+    actor VARCHAR(255) NOT NULL, -- user or service
+    action VARCHAR(255) NOT NULL, -- login, deploy_request, policy_update, etc.
+    resource_type VARCHAR(255), -- deployment, policy, config
+    resource_id VARCHAR(255),
+    status VARCHAR(50), -- success, failure, denied
+    details JSONB, -- dynamic details
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    correlation_id VARCHAR(255)
+);
+
+CREATE INDEX idx_audit_timestamp ON audit_logs(timestamp DESC);
+CREATE INDEX idx_audit_tenant_action ON audit_logs(tenant_id, action);
+CREATE INDEX idx_audit_correlation ON audit_logs(correlation_id);
