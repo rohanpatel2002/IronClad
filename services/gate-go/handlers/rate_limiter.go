@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -62,8 +63,8 @@ func (l *rateLimiter) isAllowed(ctx context.Context, ip string) bool {
 	window := time.Second
 	
 	pipe := l.redis.TxPipeline()
-	pipe.ZRemRangeByScore(ctx, key, "0", string(now-int64(window)))
-	pipe.ZAdd(ctx, key, &redis.Z{Score: float64(now), Member: string(now)})
+	pipe.ZRemRangeByScore(ctx, key, "0", strconv.FormatInt(now-int64(window), 10))
+	pipe.ZAdd(ctx, key, &redis.Z{Score: float64(now), Member: strconv.FormatInt(now, 10)})
 	pipe.ZCard(ctx, key)
 	pipe.Expire(ctx, key, window)
 	

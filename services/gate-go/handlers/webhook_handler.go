@@ -139,9 +139,10 @@ func (h *WebhookHandler) handleGitHubWebhook(c *gin.Context) {
 
 func formatDecisionComment(d *models.DeploymentDecision) string {
 	icon := "✅"
-	if d.Decision == models.DecisionWarn {
+	switch d.Decision {
+	case models.DecisionWarn:
 		icon = "⚠️"
-	} else if d.Decision == models.DecisionBlock {
+	case models.DecisionBlock:
 		icon = "❌"
 	}
 
