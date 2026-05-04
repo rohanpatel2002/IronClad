@@ -24,12 +24,26 @@ def consume_events():
 
     channel.queue_declare(queue=queue, durable=True)
 
+    from scorer.ml_predictor import RiskPredictor
+    predictor = RiskPredictor()
+
     def callback(ch, method, properties, body):
         logging.info(f"Received scoring event: {body}")
         event = json.loads(body)
-        # In a real implementation, we would call the scoring logic here
-        # and store the result in the database.
-        logging.info(f"Processed event for service: {event.get('service')}")
+        
+        # Extract features for ML prediction
+        # Mock features: [lines, complexity, author_trust, blast_radius]
+        features = [
+            event.get('lines_changed', 100),
+            event.get('complexity', 5),
+            event.get('author_trust', 0.9),
+            event.get('blast_radius', 0.5)
+        ]
+        
+        risk_score = predictor.predict_risk(features)
+        logging.info(f"ML Predicted Risk Score for {event.get('service')}: {risk_score:.4f}")
+        
+        # In a real implementation, store risk_score in DB
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     channel.basic_qos(prefetch_count=1)
