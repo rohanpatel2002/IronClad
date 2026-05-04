@@ -29,6 +29,7 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/mtls"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/soar"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/sync"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/threat"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/tracing"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
@@ -148,6 +149,7 @@ func main() {
 	// Autonomous Security Components
 	anomalyDetector := analytics.NewDecisionStats(1 * time.Hour)
 	quarantineMgr := soar.NewQuarantineManager(os.Getenv("OPA_URL"))
+	intelClient := threat.NewIntelClient()
 	costOptimizer := cost.NewOptimizer()
 	
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger, anomalyDetector, quarantineMgr, costOptimizer, redisClient)
@@ -164,7 +166,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(handlers.WAFMiddleware()) // Request-level WAF
+	router.Use(handlers.WAFMiddleware(intelClient)) // Request-level WAF with Intel
 	router.Use(handlers.SecurityHeadersMiddleware())
 	router.Use(handlers.RequestIDMiddleware())
 	router.Use(structuredRequestLogger(log))
