@@ -209,7 +209,18 @@ services:
     depends_on:
       - prometheus
 
+  chromadb:
+    image: chromadb/chroma:0.5.3
+    container_name: ironclad-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadata:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=False
+
 volumes:
   pgdata:
   grafdata:
+  chromadata:
 
