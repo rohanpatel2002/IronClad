@@ -8,15 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 	apperrors "github.com/rohanpatel2002/ironclad/services/gate-go/pkg/errors"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/analytics"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/audit"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/cost"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/soar"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/sync"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
+	"github.com/go-redis/redis/v8"
 )
 
 // DecisionHandler holds dependencies for the decision HTTP layer
 type DecisionHandler struct {
-	svc   *services.DecisionService
-	store *decisionStore
-	audit *audit.AuditLogger
+	svc         *services.DecisionService
+	store       *decisionStore
+	audit       *audit.AuditLogger
+	anomaly     *analytics.DecisionStats
+	soar        *soar.QuarantineManager
+	cost        *cost.Optimizer
+	redisClient *redis.Client
 }
 
 // decisionStore is a thread-safe in-memory cache for recent decisions
@@ -43,8 +52,23 @@ func (s *decisionStore) get(id string) (*models.DeploymentDecision, bool) {
 }
 
 // NewDecisionHandler creates a new handler with the given service and audit logger.
-func NewDecisionHandler(svc *services.DecisionService, auditLogger *audit.AuditLogger) *DecisionHandler {
-	return &DecisionHandler{svc: svc, store: newDecisionStore(), audit: auditLogger}
+func NewDecisionHandler(
+	svc *services.DecisionService,
+	auditLogger *audit.AuditLogger,
+	anomaly *analytics.DecisionStats,
+	soar *soar.QuarantineManager,
+	cost *cost.Optimizer,
+	redisClient *redis.Client,
+) *DecisionHandler {
+	return &DecisionHandler{
+		svc:         svc,
+		store:       newDecisionStore(),
+		audit:       auditLogger,
+		anomaly:     anomaly,
+		soar:        soar,
+		cost:        cost,
+		redisClient: redisClient,
+	}
 }
 
 // RegisterRoutes attaches decision endpoints to the router group
@@ -64,6 +88,26 @@ func (h *DecisionHandler) handleDecision(c *gin.Context) {
 		return
 	}
 
+	// Cost Optimization Check
+	if h.cost.ShouldDefer(time.Now()) {
+		nextWindow := h.cost.GetNextWindow(time.Now())
+		c.Header("X-IronClad-Cost-Advice", "peak_period_detected")
+		c.Header("X-IronClad-Suggested-Window", nextWindow.Format(time.RFC3339))
+	}
+
+	// Concurrency Control via Distributed Lock
+	lock := sync.NewDistLock(h.redisClient, "deploy:"+req.Service)
+	acquired, err := lock.Lock(c.Request.Context(), 30*time.Second)
+	if err != nil {
+		apperrors.Respond(c, apperrors.New(http.StatusInternalServerError, apperrors.ErrInternal, "lock acquisition error"))
+		return
+	}
+	if !acquired {
+		apperrors.Respond(c, apperrors.New(http.StatusConflict, apperrors.ErrInternal, "concurrent deployment in progress"))
+		return
+	}
+	defer lock.Unlock(c.Request.Context())
+
 	decision, err := h.svc.EvaluateDeployment(c.Request.Context(), &req)
 	if err != nil {
 		apperrors.Respond(c, apperrors.New(http.StatusInternalServerError, apperrors.ErrInternal, err.Error()))
@@ -72,6 +116,17 @@ func (h *DecisionHandler) handleDecision(c *gin.Context) {
 
 	h.store.save(decision)
 	RecordDecisionMetric(string(decision.Decision))
+
+	// Autonomous Security Anomaly Detection
+	val := 0.0
+	if decision.Decision == models.DecisionAllow {
+		val = 1.0
+	}
+	h.anomaly.Record(val)
+
+	if h.anomaly.IsAnomalous(val) {
+		h.soar.QuarantineService(c.Request.Context(), req.Service, "detected anomalous deployment decision pattern")
+	}
 
 	// Record Audit Log
 	h.audit.Log(c.Request.Context(), audit.LogRecord{

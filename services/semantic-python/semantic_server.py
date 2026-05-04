@@ -40,7 +40,19 @@ def classify_intent():
     )
 
     try:
+        from embeddings.generator import EmbeddingGenerator
+        embedder = EmbeddingGenerator()
+        
         response = classifier.classify(req)
+        
+        # Store in vector database for future failure motif matching
+        profile_content = f"Service: {req.service}\nIntent: {response.intent}\nReasoning: {response.reasoning}\nFiles: {', '.join(req.changed_files)}"
+        embedder.store_incident(
+            incident_id=req.commit_hash,
+            content=profile_content,
+            metadata={"service": req.service, "intent": response.intent}
+        )
+
         return jsonify({
             "intent": response.intent,
             "confidence": response.confidence,

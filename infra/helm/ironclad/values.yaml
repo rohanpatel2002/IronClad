@@ -28,6 +28,11 @@ gate:
     requests:
       cpu: 100m
       memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
 
 topology:
   replicaCount: 2
@@ -37,18 +42,24 @@ topology:
   service:
     type: ClusterIP
     port: 8081
-  livenessProbe:
-    httpGet:
-      path: /health
-      port: 8081
-    initialDelaySeconds: 5
-    periodSeconds: 10
-  readinessProbe:
-    httpGet:
-      path: /health
-      port: 8081
-    initialDelaySeconds: 5
-    periodSeconds: 5
+
+scoring:
+  replicaCount: 2
+  image:
+    repository: ironclad/scoring-python
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8083
+
+semantic:
+  replicaCount: 2
+  image:
+    repository: ironclad/semantic-python
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8082
 
 # Subcharts
 postgresql:
@@ -60,4 +71,8 @@ postgresql:
 
 redis:
   enabled: true
-  architecture: standalone
+  architecture: replication # Production-ready replication
+  master:
+    resources:
+      limits:
+        memory: 256Mi

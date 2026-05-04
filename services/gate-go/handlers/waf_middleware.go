@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/threat"
 )
 
 var (
@@ -16,8 +17,14 @@ var (
 )
 
 // WAFMiddleware provides lightweight protection against common web attacks.
-func WAFMiddleware() gin.HandlerFunc {
+func WAFMiddleware(intel *threat.IntelClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Check Global Threat Intel
+		if intel.IsMalicious(c.ClientIP()) {
+			blockRequest(c, "request from known malicious IP")
+			return
+		}
+
 		// Check URL parameters
 		for _, values := range c.Request.URL.Query() {
 			for _, v := range values {
