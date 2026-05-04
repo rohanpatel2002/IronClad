@@ -190,6 +190,7 @@ func main() {
 
 	// API routes
 	v1 := router.Group("/api/v1")
+	v1.Use(handlers.APIKeyMiddleware(apiKeyManager)) // M2M Authentication
 	decisionHandler.RegisterRoutes(v1)
 	webhookHandler.RegisterRoutes(v1)
 
