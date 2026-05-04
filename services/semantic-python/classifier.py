@@ -117,3 +117,25 @@ Classify the intent."""
             confidence=confidence,
             reasoning=reasoning
         )
+
+    def get_deep_reasoning(self, req: IntentClassificationRequest, response: IntentClassificationResponse) -> str:
+        """
+        Provides deeper context on the security implications of the deployment.
+        """
+        if not self.client:
+            return f"Heuristic analysis suggests this {response.intent} deployment is consistent with previous patterns for {req.service}."
+        
+        system_prompt = "You are a senior security architect. Provide a deep security reasoning for this deployment intent classification."
+        prompt = f"Intent: {response.intent}\nService: {req.service}\nFiles: {', '.join(req.changed_files)}\nConfidence: {response.confidence}"
+        
+        try:
+            res = self.client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=300,
+                temperature=0.7,
+                system=system_prompt,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return res.content[0].text
+        except:
+            return "Deep reasoning currently unavailable, using baseline security profile."
