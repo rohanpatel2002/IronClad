@@ -1,0 +1,32 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: gate-latency-chaos
+  namespace: ironclad
+spec:
+  action: delay
+  mode: one
+  selector:
+    labelSelectors:
+      app: gate
+  delay:
+    latency: "100ms"
+    correlation: "100"
+  duration: "5m"
+  scheduler:
+    cron: "@every 1h"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: scoring-pod-failure
+  namespace: ironclad
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    labelSelectors:
+      app: scoring
+  duration: "1m"
+  scheduler:
+    cron: "@every 2h"
