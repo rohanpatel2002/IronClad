@@ -27,8 +27,8 @@ func setupWebhookRouter(t *testing.T) *gin.Engine {
 	t.Setenv("GITHUB_WEBHOOK_SECRET", testWebhookSecret)
 	gin.SetMode(gin.TestMode)
 
-	// We pass nil DecisionService — webhook should reject before reaching it
-	wh := handlers.NewWebhookHandler((*services.DecisionService)(nil))
+	// We pass nil DecisionService and nil Redis — webhook should reject before reaching them
+	wh := handlers.NewWebhookHandler((*services.DecisionService)(nil), nil)
 	router := gin.New()
 	router.Use(handlers.PrometheusMiddleware())
 	v1 := router.Group("/api/v1")
