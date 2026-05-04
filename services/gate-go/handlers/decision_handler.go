@@ -12,7 +12,7 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/audit"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/cost"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/soar"
-	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/sync"
+	distsync "github.com/rohanpatel2002/ironclad/services/gate-go/pkg/sync"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 	"github.com/go-redis/redis/v8"
 )
@@ -96,7 +96,7 @@ func (h *DecisionHandler) handleDecision(c *gin.Context) {
 	}
 
 	// Concurrency Control via Distributed Lock
-	lock := sync.NewDistLock(h.redisClient, "deploy:"+req.Service)
+	lock := distsync.NewDistLock(h.redisClient, "deploy:"+req.Service)
 	acquired, err := lock.Lock(c.Request.Context(), 30*time.Second)
 	if err != nil {
 		apperrors.Respond(c, apperrors.New(http.StatusInternalServerError, apperrors.ErrInternal, "lock acquisition error"))
