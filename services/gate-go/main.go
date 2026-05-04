@@ -28,7 +28,6 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/mtls"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/soar"
-	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/sync"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/threat"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/tracing"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"

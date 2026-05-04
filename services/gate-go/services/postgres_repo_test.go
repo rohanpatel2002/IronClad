@@ -29,8 +29,8 @@ func TestPostgresRepositories(t *testing.T) {
 		t.Skip("PostgreSQL not running on localhost:5432, skipping test")
 	}
 
-	deployRepo := services.NewPostgresDeploymentRepository(db)
-	riskRepo := services.NewPostgresRiskScoreRepository(db)
+	deployRepo := services.NewPostgresDeploymentRepository(db, nil)
+	riskRepo := services.NewPostgresRiskScoreRepository(db, nil)
 
 	ctx := context.Background()
 
