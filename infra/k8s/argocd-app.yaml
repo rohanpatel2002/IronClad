@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ironclad-platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/rohanpatel2002/IronClad.git'
+    targetRevision: HEAD
+    path: infra/k8s
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: ironclad
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
