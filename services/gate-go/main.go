@@ -21,10 +21,14 @@ import (
 
 	"github.com/rohanpatel2002/ironclad/services/gate-go/clients"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/analytics"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/audit"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/auth"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/cost"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/mtls"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/soar"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/sync"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/tracing"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/services"
 )
@@ -140,9 +144,18 @@ func main() {
 	}
 
 	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
-	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger)
+	
+	// Autonomous Security Components
+	anomalyDetector := analytics.NewDecisionStats(1 * time.Hour)
+	quarantineMgr := soar.NewQuarantineManager(os.Getenv("OPA_URL"))
+	costOptimizer := cost.NewOptimizer()
+	
+	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger, anomalyDetector, quarantineMgr, costOptimizer, redisClient)
+	// Inject autonomous components into handler (logic to follow in handler update)
+	
 	webhookHandler := handlers.NewWebhookHandler(decisionSvc, redisClient)
 	jwtManager := auth.NewJWTManager()
+	apiKeyManager := auth.NewAPIKeyManager() // Initializing for M2M auth
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -151,6 +164,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(handlers.WAFMiddleware()) // Request-level WAF
 	router.Use(handlers.SecurityHeadersMiddleware())
 	router.Use(handlers.RequestIDMiddleware())
 	router.Use(structuredRequestLogger(log))
