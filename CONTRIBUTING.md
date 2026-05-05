@@ -119,6 +119,7 @@ All pull requests must include:
 
 - **Unit tests** for new functions/methods
 - **Integration tests** for cross-service interactions
+- **Mocks and Stubs** should be used for external dependencies (e.g. databases, HTTP services)
 - **No test regressions** (all existing tests still pass)
 - **Coverage reports** (must not decrease overall coverage)
 
