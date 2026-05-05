@@ -8,8 +8,18 @@ import (
 // DynamicConfig holds configuration that can be updated at runtime.
 type DynamicConfig struct {
 	mu            sync.RWMutex
-	RiskThreshold float64
-	Maintenance   bool
+	RiskThreshold      float64
+	Maintenance        bool
+	ServiceCriticality map[string]float64
+}
+
+func (c *DynamicConfig) GetServiceCriticality(service string) float64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if crit, ok := c.ServiceCriticality[service]; ok {
+		return crit
+	}
+	return 0.5 // Default criticality
 }
 
 var (
@@ -23,6 +33,12 @@ func Get() *DynamicConfig {
 		instance = &DynamicConfig{
 			RiskThreshold: 0.8,
 			Maintenance:   false,
+			ServiceCriticality: map[string]float64{
+				"gate-go":        0.9,
+				"topology-go":    0.8,
+				"scoring-python": 0.7,
+				"semantic-python": 0.6,
+			},
 		}
 		go instance.watch()
 	})

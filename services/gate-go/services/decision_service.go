@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/config"
 )
 
 // DecisionService handles the core decision-making logic
@@ -132,7 +133,7 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 		BlastRadius:  blastRadius,
 		ChangedFiles: req.ChangedFiles,
 		Environment:  req.Environment,
-		ServiceCrit:  0.7, // TODO: fetch from config
+		ServiceCrit:  config.Get().GetServiceCriticality(req.Service),
 		Intent:       intentRes.Intent,
 	}
 
