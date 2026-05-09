@@ -48,13 +48,12 @@ func (g *ReportGenerator) GenerateSOC2Summary(ctx context.Context, start, end ti
 	}
 
 	// Audit the action
-	_ = g.logger.Log(ctx, audit.LogRecord{
-		Action:    "GENERATE_GOVERNANCE_REPORT",
-		Actor:     "system", // Ideally extract from context
-		Resource:  "governance_report",
-		Status:    "success",
-		Timestamp: time.Now(),
-		Metadata: map[string]interface{}{
+	g.logger.Log(ctx, audit.LogRecord{
+		Action:       "GENERATE_GOVERNANCE_REPORT",
+		Actor:        "system", // Ideally extract from context
+		ResourceType: "governance_report",
+		Status:       "success",
+		Details: map[string]interface{}{
 			"start": start.Format(time.DateOnly),
 			"end":   end.Format(time.DateOnly),
 			"count": len(records),
