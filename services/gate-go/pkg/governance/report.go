@@ -1,7 +1,9 @@
 package governance
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -71,6 +73,35 @@ func (g *ReportGenerator) GenerateSOC2Summary(ctx context.Context, start, end ti
 	}
 
 	return report, nil
+}
+
+// GenerateSOC2CSV creates a CSV version of the security audit data.
+func (g *ReportGenerator) GenerateSOC2CSV(ctx context.Context, start, end time.Time) ([]byte, error) {
+	records, err := g.repo.ListByTimeRange(ctx, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+
+	// Header
+	_ = w.Write([]string{"ID", "Timestamp", "Service", "Author", "Intent", "Status", "Explanation"})
+
+	for _, r := range records {
+		_ = w.Write([]string{
+			r.ID,
+			r.DecisionTime.Format(time.RFC3339),
+			r.ServiceName,
+			r.AuthorEmail,
+			r.SemanticIntent,
+			r.DecisionStatus,
+			r.Explanation,
+		})
+	}
+
+	w.Flush()
+	return buf.Bytes(), nil
 }
 
 // ExportAsJSON serializes the report for automated compliance ingestion.

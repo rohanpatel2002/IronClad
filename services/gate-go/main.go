@@ -205,6 +205,7 @@ func main() {
 	decisionHandler.RegisterRoutes(v1)
 	webhookHandler.RegisterRoutes(v1)
 	v1.GET("/governance/report", govHandler.GenerateSOC2Report)
+	v1.GET("/governance/report/csv", govHandler.ExportSOC2CSV)
 
 	// Protected management routes
 	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager, tokenBlacklist))
