@@ -155,7 +155,7 @@ func main() {
 	govHandler := handlers.NewGovernanceHandler(reportGen)
 
 	metricsRecorder := &PrometheusMetrics{}
-	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo, anomalyDetector, metricsRecorder)
+	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo, anomalyDetector, metricsRecorder, quarantineMgr)
 	
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger, anomalyDetector, quarantineMgr, costOptimizer, redisClient)
 	// Inject autonomous components into handler (logic to follow in handler update)
