@@ -47,6 +47,20 @@ func (g *ReportGenerator) GenerateSOC2Summary(ctx context.Context, start, end ti
 		return nil, fmt.Errorf("failed to fetch records for report: %w", err)
 	}
 
+	// Audit the action
+	_ = g.logger.Log(ctx, audit.LogRecord{
+		Action:    "GENERATE_GOVERNANCE_REPORT",
+		Actor:     "system", // Ideally extract from context
+		Resource:  "governance_report",
+		Status:    "success",
+		Timestamp: time.Now(),
+		Metadata: map[string]interface{}{
+			"start": start.Format(time.DateOnly),
+			"end":   end.Format(time.DateOnly),
+			"count": len(records),
+		},
+	})
+
 	var allowed, blocked int
 	for _, r := range records {
 		if r.DecisionStatus == "ALLOW" {
