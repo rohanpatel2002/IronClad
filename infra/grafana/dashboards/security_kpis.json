@@ -30,6 +30,23 @@
       "targets": [
         { "expr": "topk(5, sum by (impacted_service) (blast_radius_impact_total))" }
       ]
+    },
+    {
+      "title": "Global Threat Detections (Blocked IPs)",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum(rate(ironclad_gate_threat_intel_blocks_total[1h]))" }
+      ]
+    },
+    {
+      "title": "Anomalous Decisions (Z-Score > 3)",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum(rate(ironclad_gate_anomalous_decisions_total[1h]))" }
+      ]
+    }
     }
   ],
   "refresh": "10s",

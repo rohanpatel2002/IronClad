@@ -21,6 +21,7 @@ func WAFMiddleware(intel *threat.IntelClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check Global Threat Intel
 		if intel.IsMalicious(c.ClientIP()) {
+			RecordThreatBlockMetric()
 			blockRequest(c, "request from known malicious IP")
 			return
 		}

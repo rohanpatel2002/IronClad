@@ -10,13 +10,26 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/config"
 )
 
+// AnomalyDetector interface for detecting unusual patterns
+type AnomalyDetector interface {
+	IsAnomalous(value float64) bool
+	Record(value float64)
+}
+
+// MetricsRecorder interface for recording security metrics
+type MetricsRecorder interface {
+	RecordAnomaly()
+}
+
 // DecisionService handles the core decision-making logic
 type DecisionService struct {
-	topologyClient     TopologyClient
-	semanticClient     SemanticClient
-	scoringClient      ScoringClient
-	deploymentRepo     DeploymentRepository
-	riskScoreRepo      RiskScoreRepository
+	topologyClient  TopologyClient
+	semanticClient  SemanticClient
+	scoringClient   ScoringClient
+	deploymentRepo  DeploymentRepository
+	riskScoreRepo   RiskScoreRepository
+	anomalyDetector AnomalyDetector
+	metrics         MetricsRecorder
 }
 
 // TopologyClient interface for dependency graph queries
@@ -38,6 +51,7 @@ type SemanticClient interface {
 type DeploymentRepository interface {
 	Store(ctx context.Context, record *models.DeploymentRecord) error
 	Get(ctx context.Context, id string) (*models.DeploymentRecord, error)
+	ListByTimeRange(ctx context.Context, start, end time.Time) ([]*models.DeploymentRecord, error)
 }
 
 // RiskScoreRepository persists risk scores
@@ -88,13 +102,17 @@ func NewDecisionService(
 	scoring ScoringClient,
 	deployRepo DeploymentRepository,
 	riskRepo RiskScoreRepository,
+	anomalyDetector AnomalyDetector,
+	metrics MetricsRecorder,
 ) *DecisionService {
 	return &DecisionService{
-		topologyClient:     topology,
-		semanticClient:     semantic,
-		scoringClient:      scoring,
-		deploymentRepo:     deployRepo,
-		riskScoreRepo:      riskRepo,
+		topologyClient:  topology,
+		semanticClient:  semantic,
+		scoringClient:   scoring,
+		deploymentRepo:  deployRepo,
+		riskScoreRepo:   riskRepo,
+		anomalyDetector: anomalyDetector,
+		metrics:         metrics,
 	}
 }
 
@@ -142,13 +160,31 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 		return nil, fmt.Errorf("scoring failed: %w", err)
 	}
 
-	// Step 3: Determine decision based on scores
+	// Step 4: Determine decision based on scores
 	decision := determineDecision(scoreResp)
 
-	// Step 4: Generate explanation
-	explanation := generateExplanation(decision, scoreResp, impactedServices)
+	// Step 5: Anomaly Detection
+	// We convert decision to numerical value: ALLOW=1, WARN=0.5, BLOCK=0
+	decisionValue := 1.0
+	if decision == models.DecisionWarn {
+		decisionValue = 0.5
+	} else if decision == models.DecisionBlock {
+		decisionValue = 0.0
+	}
+	isAnomalous := ds.anomalyDetector.IsAnomalous(decisionValue)
+	ds.anomalyDetector.Record(decisionValue)
+	if isAnomalous {
+		ds.metrics.RecordAnomaly()
+	}
 
-	// Step 5: Suggest safe windows (if WARN or BLOCK)
+	// Step 6: Generate explanation
+	explanation := generateExplanation(decision, scoreResp, impactedServices)
+	if isAnomalous {
+		explanation.Summary = "[ANOMALY DETECTED] " + explanation.Summary
+		explanation.RiskFactors = append(explanation.RiskFactors, "This decision is statistically anomalous compared to recent history for this service.")
+	}
+
+	// Step 7: Suggest safe windows (if WARN or BLOCK)
 	var safeWindows []models.TimeWindow
 	if decision != models.DecisionAllow {
 		safeWindows = suggestDeploymentWindows()
@@ -165,9 +201,10 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 		DecisionTimestamp:    decisionTime,
 		Intent:               intentRes.Intent,
 		IntentConfidence:     intentRes.Confidence,
+		IsAnomalous:          isAnomalous,
 	}
 
-	// Step 6: Persist decision (non-blocking)
+	// Step 8: Persist decision (non-blocking)
 	go func() {
 		deployRecord := &models.DeploymentRecord{
 			ID:              decisionID,

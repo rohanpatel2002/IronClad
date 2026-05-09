@@ -7,7 +7,7 @@ import (
 
 var (
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
-	tokenRegex = regexp.MustCompile(`(Bearer|token|secret|password|key)[:\s]+[a-zA-Z0-9._-]+`)
+	tokenRegex = regexp.MustCompile(`(?i)(Bearer|token|secret|password|key)[:\s]+[a-zA-Z0-9._-]+`)
 )
 
 // ScrubPII removes sensitive information from a string.
