@@ -107,12 +107,14 @@ func main() {
 	var deployRepo services.DeploymentRepository
 	var riskRepo services.RiskScoreRepository
 	var auditLogger *audit.AuditLogger
+	var db *sql.DB
 
 	dbURL := os.Getenv("DATABASE_URL")
 	replicaURL := os.Getenv("DATABASE_REPLICA_URL")
 
 	if dbURL != "" {
-		db, err := sql.Open("postgres", dbURL)
+		var err error
+		db, err = sql.Open("postgres", dbURL)
 		if err != nil {
 			log.Error("Failed to open database", "error", err)
 			os.Exit(1)
@@ -155,7 +157,7 @@ func main() {
 	govHandler := handlers.NewGovernanceHandler(reportGen)
 
 	metricsRecorder := &PrometheusMetrics{}
-	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo, anomalyDetector, metricsRecorder)
+	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo, anomalyDetector, metricsRecorder, quarantineMgr)
 	
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger, anomalyDetector, quarantineMgr, costOptimizer, redisClient)
 	// Inject autonomous components into handler (logic to follow in handler update)
@@ -163,6 +165,8 @@ func main() {
 	webhookHandler := handlers.NewWebhookHandler(decisionSvc, redisClient)
 	jwtManager := auth.NewJWTManager()
 	apiKeyManager := auth.NewAPIKeyManager() // Initializing for M2M auth
+	tokenBlacklist := auth.NewTokenBlacklist(redisClient)
+	healthHandler := handlers.NewHealthHandler(db, redisClient)
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -184,6 +188,8 @@ func main() {
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Health check
+	router.GET("/health/live", healthHandler.LivenessCheck)
+	router.GET("/health/ready", healthHandler.ReadinessCheck)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status":    "healthy",
@@ -199,9 +205,10 @@ func main() {
 	decisionHandler.RegisterRoutes(v1)
 	webhookHandler.RegisterRoutes(v1)
 	v1.GET("/governance/report", govHandler.GenerateSOC2Report)
+	v1.GET("/governance/report/csv", govHandler.ExportSOC2CSV)
 
 	// Protected management routes
-	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager))
+	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager, tokenBlacklist))
 	mgmt.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
 	
 	// Expose pprof on a separate group or within mgmt

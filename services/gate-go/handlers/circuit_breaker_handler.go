@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sony/gobreaker"
 )
 
@@ -20,11 +22,39 @@ type CircuitBreakerStatus struct {
 }
 
 // circuitBreakerRegistry holds references to all registered circuit breakers.
-var circuitBreakerRegistry = map[string]*gobreaker.CircuitBreaker{}
+var (
+	circuitBreakerRegistry = map[string]*gobreaker.CircuitBreaker{}
+	
+	cbStateMetric = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "ironclad_gate_circuit_breaker_state",
+			Help: "Current state of the circuit breaker (0=closed, 1=half-open, 2=open)",
+		},
+		[]string{"name"},
+	)
+)
 
 // RegisterCircuitBreaker adds a circuit breaker to the status registry.
 func RegisterCircuitBreaker(name string, cb *gobreaker.CircuitBreaker) {
 	circuitBreakerRegistry[name] = cb
+}
+
+func init() {
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		for range ticker.C {
+			for name, cb := range circuitBreakerRegistry {
+				state := 0.0
+				switch cb.State() {
+				case gobreaker.StateHalfOpen:
+					state = 1.0
+				case gobreaker.StateOpen:
+					state = 2.0
+				}
+				cbStateMetric.WithLabelValues(name).Set(state)
+			}
+		}
+	}()
 }
 
 // CircuitBreakerStatusHandler returns the HTTP handler for CB status.

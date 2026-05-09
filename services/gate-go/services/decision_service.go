@@ -21,6 +21,11 @@ type MetricsRecorder interface {
 	RecordAnomaly()
 }
 
+// QuarantineManager interface for automated remediation
+type QuarantineManager interface {
+	QuarantineService(ctx context.Context, serviceID string, reason string) error
+}
+
 // DecisionService handles the core decision-making logic
 type DecisionService struct {
 	topologyClient  TopologyClient
@@ -30,6 +35,7 @@ type DecisionService struct {
 	riskScoreRepo   RiskScoreRepository
 	anomalyDetector AnomalyDetector
 	metrics         MetricsRecorder
+	quarantine      QuarantineManager
 }
 
 // TopologyClient interface for dependency graph queries
@@ -104,6 +110,7 @@ func NewDecisionService(
 	riskRepo RiskScoreRepository,
 	anomalyDetector AnomalyDetector,
 	metrics MetricsRecorder,
+	quarantine QuarantineManager,
 ) *DecisionService {
 	return &DecisionService{
 		topologyClient:  topology,
@@ -113,6 +120,7 @@ func NewDecisionService(
 		riskScoreRepo:   riskRepo,
 		anomalyDetector: anomalyDetector,
 		metrics:         metrics,
+		quarantine:      quarantine,
 	}
 }
 
@@ -175,6 +183,12 @@ func (ds *DecisionService) EvaluateDeployment(ctx context.Context, req *models.D
 	ds.anomalyDetector.Record(decisionValue)
 	if isAnomalous {
 		ds.metrics.RecordAnomaly()
+		// If anomalous AND a BLOCK decision, trigger automated quarantine
+		if decision == models.DecisionBlock {
+			go func() {
+				_ = ds.quarantine.QuarantineService(context.Background(), req.Service, "High-risk anomalous deployment attempt detected")
+			}()
+		}
 	}
 
 	// Step 6: Generate explanation

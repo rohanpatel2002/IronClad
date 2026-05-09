@@ -49,6 +49,12 @@ type mockMetricsRecorder struct{}
 
 func (m *mockMetricsRecorder) RecordAnomaly() {}
 
+type mockQuarantineManager struct{}
+
+func (m *mockQuarantineManager) QuarantineService(_ context.Context, _ string, _ string) error {
+	return nil
+}
+
 // makeService builds a DecisionService with mock dependencies
 func makeService(blastRadius float64, impacted []string, scores *services.ScoringResponse) *services.DecisionService {
 	topology := &mockTopologyClient{blastRadius: blastRadius, impactedServices: impacted}
@@ -56,6 +62,7 @@ func makeService(blastRadius float64, impacted []string, scores *services.Scorin
 	semantic := &mockSemanticClient{response: &services.IntentResponse{Intent: "feature", Confidence: 0.9, Reasoning: "test"}}
 	anomaly := &mockAnomalyDetector{anomalous: false}
 	metrics := &mockMetricsRecorder{}
+	quarantine := &mockQuarantineManager{}
 	return services.NewDecisionService(
 		topology,
 		semantic,
@@ -64,6 +71,7 @@ func makeService(blastRadius float64, impacted []string, scores *services.Scorin
 		services.NewNoopRiskScoreRepository(),
 		anomaly,
 		metrics,
+		quarantine,
 	)
 }
 

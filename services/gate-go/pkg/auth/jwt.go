@@ -45,6 +45,7 @@ func (m *JWTManager) Generate(username, role string) (string, error) {
 		Username: username,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.tokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
