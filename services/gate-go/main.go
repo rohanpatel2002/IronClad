@@ -107,12 +107,14 @@ func main() {
 	var deployRepo services.DeploymentRepository
 	var riskRepo services.RiskScoreRepository
 	var auditLogger *audit.AuditLogger
+	var db *sql.DB
 
 	dbURL := os.Getenv("DATABASE_URL")
 	replicaURL := os.Getenv("DATABASE_REPLICA_URL")
 
 	if dbURL != "" {
-		db, err := sql.Open("postgres", dbURL)
+		var err error
+		db, err = sql.Open("postgres", dbURL)
 		if err != nil {
 			log.Error("Failed to open database", "error", err)
 			os.Exit(1)
@@ -164,6 +166,7 @@ func main() {
 	jwtManager := auth.NewJWTManager()
 	apiKeyManager := auth.NewAPIKeyManager() // Initializing for M2M auth
 	tokenBlacklist := auth.NewTokenBlacklist(redisClient)
+	healthHandler := handlers.NewHealthHandler(db, redisClient)
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -185,6 +188,8 @@ func main() {
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Health check
+	router.GET("/health/live", healthHandler.LivenessCheck)
+	router.GET("/health/ready", healthHandler.ReadinessCheck)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status":    "healthy",
