@@ -163,6 +163,7 @@ func main() {
 	webhookHandler := handlers.NewWebhookHandler(decisionSvc, redisClient)
 	jwtManager := auth.NewJWTManager()
 	apiKeyManager := auth.NewAPIKeyManager() // Initializing for M2M auth
+	tokenBlacklist := auth.NewTokenBlacklist(redisClient)
 
 	// Configure Gin
 	if os.Getenv("GIN_MODE") == "" {
@@ -201,7 +202,7 @@ func main() {
 	v1.GET("/governance/report", govHandler.GenerateSOC2Report)
 
 	// Protected management routes
-	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager))
+	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager, tokenBlacklist))
 	mgmt.GET("/circuit-breaker/status", handlers.CircuitBreakerStatusHandler())
 	
 	// Expose pprof on a separate group or within mgmt
