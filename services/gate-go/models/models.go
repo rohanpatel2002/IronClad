@@ -53,6 +53,7 @@ type DeploymentDecision struct {
 	DecisionTimestamp      time.Time     `json:"decision_timestamp"`
 	Intent                 string        `json:"intent,omitempty"`
 	IntentConfidence       float64       `json:"intent_confidence,omitempty"`
+	IsAnomalous            bool          `json:"is_anomalous"`
 }
 
 // TimeWindow represents a recommended deployment window

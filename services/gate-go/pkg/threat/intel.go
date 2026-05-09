@@ -1,9 +1,16 @@
 package threat
 
 import (
+	"bufio"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	feedURL = "https://feodotracker.abuse.ch/downloads/ipblocklist.txt"
 )
 
 // IntelClient pulls global threat feeds to identify malicious actors.
@@ -17,8 +24,10 @@ type IntelClient struct {
 func NewIntelClient() *IntelClient {
 	c := &IntelClient{
 		maliciousIPs: make(map[string]bool),
-		client:       &http.Client{Timeout: 5 * time.Second},
+		client:       &http.Client{Timeout: 10 * time.Second},
 	}
+	// Initial fetch
+	c.refreshFeeds()
 	go c.refreshLoop()
 	return c
 }
@@ -31,16 +40,38 @@ func (c *IntelClient) refreshLoop() {
 }
 
 func (c *IntelClient) refreshFeeds() {
-	// Mocking a call to a threat intel feed (e.g., AbuseIPDB, AlienVault)
-	newIPs := map[string]bool{
-		"1.2.3.4":   true,
-		"8.8.8.8":   false, // Example of clean IP
-		"192.168.1.1": false,
+	resp, err := c.client.Get(feedURL)
+	if err != nil {
+		fmt.Printf("Error fetching threat feed: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Unexpected status code from threat feed: %d\n", resp.StatusCode)
+		return
+	}
+
+	newIPs := make(map[string]bool)
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// Skip comments and empty lines
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		newIPs[line] = true
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Printf("Error reading threat feed: %v\n", err)
+		return
 	}
 
 	c.mu.Lock()
 	c.maliciousIPs = newIPs
 	c.mu.Unlock()
+	fmt.Printf("Refreshed threat intelligence: %d malicious IPs tracked\n", len(newIPs))
 }
 
 // IsMalicious returns true if the IP is found in the global threat database.

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 )
@@ -33,6 +34,19 @@ func (r *NoopDeploymentRepository) Get(_ context.Context, id string) (*models.De
 		return rec, nil
 	}
 	return nil, nil
+}
+
+func (r *NoopDeploymentRepository) ListByTimeRange(_ context.Context, start, end time.Time) ([]*models.DeploymentRecord, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var result []*models.DeploymentRecord
+	for _, rec := range r.records {
+		if (rec.DeployTimestamp.After(start) || rec.DeployTimestamp.Equal(start)) &&
+			(rec.DeployTimestamp.Before(end) || rec.DeployTimestamp.Equal(end)) {
+			result = append(result, rec)
+		}
+	}
+	return result, nil
 }
 
 // NoopRiskScoreRepository is an in-memory no-op that satisfies the

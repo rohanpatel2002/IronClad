@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/rohanpatel2002/ironclad/services/gate-go/models"
 )
@@ -85,4 +86,53 @@ func (r *PostgresDeploymentRepository) Get(ctx context.Context, id string) (*mod
 	}
 
 	return &rec, nil
+}
+
+// ListByTimeRange returns all deployment records within a specific time window.
+func (r *PostgresDeploymentRepository) ListByTimeRange(ctx context.Context, start, end time.Time) ([]*models.DeploymentRecord, error) {
+	query := `
+		SELECT 
+			id, deploy_timestamp, commit_hash, branch, service_name,
+			author_email, diff_summary, semantic_intent, decision_status, decision_timestamp,
+			explanation, created_at, updated_at
+		FROM deployments
+		WHERE deploy_timestamp BETWEEN $1 AND $2
+		ORDER BY deploy_timestamp DESC
+	`
+	rows, err := r.replica.QueryContext(ctx, query, start, end)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list deployments: %w", err)
+	}
+	defer rows.Close()
+
+	var records []*models.DeploymentRecord
+	for rows.Next() {
+		var rec models.DeploymentRecord
+		var diffSummary, semanticIntent, explanation, authorEmail sql.NullString
+		var decisionTime sql.NullTime
+
+		err := rows.Scan(
+			&rec.ID, &rec.DeployTimestamp, &rec.CommitHash, &rec.Branch, &rec.ServiceName,
+			&authorEmail, &diffSummary, &semanticIntent, &rec.DecisionStatus, &decisionTime,
+			&explanation, &rec.CreatedAt, &rec.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan deployment row: %w", err)
+		}
+
+		rec.AuthorEmail = authorEmail.String
+		rec.DiffSummary = diffSummary.String
+		rec.SemanticIntent = semanticIntent.String
+		rec.Explanation = explanation.String
+		if decisionTime.Valid {
+			rec.DecisionTime = decisionTime.Time
+		}
+		records = append(records, &rec)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating deployment rows: %w", err)
+	}
+
+	return records, nil
 }

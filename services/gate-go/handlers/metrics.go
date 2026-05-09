@@ -34,11 +34,35 @@ var (
 		},
 		[]string{"decision"},
 	)
+
+	threatIntelBlocksTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "ironclad_gate_threat_intel_blocks_total",
+			Help: "Total number of requests blocked by threat intelligence",
+		},
+	)
 )
+
+// RecordThreatBlockMetric increments the counter for a threat intelligence block
+func RecordThreatBlockMetric() {
+	threatIntelBlocksTotal.Inc()
+}
 
 // RecordDecisionMetric increments the counter for a specific decision outcome
 func RecordDecisionMetric(decision string) {
 	decisionsTotal.WithLabelValues(decision).Inc()
+}
+
+var anomalousDecisionsTotal = promauto.NewCounter(
+	prometheus.CounterOpts{
+		Name: "ironclad_gate_anomalous_decisions_total",
+		Help: "Total number of anomalous deployment decisions detected",
+	},
+)
+
+// RecordAnomalyMetric increments the counter for an anomalous decision
+func RecordAnomalyMetric() {
+	anomalousDecisionsTotal.Inc()
 }
 
 // PrometheusMiddleware collects basic HTTP metrics for Gin

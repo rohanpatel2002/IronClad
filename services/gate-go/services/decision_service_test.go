@@ -38,17 +38,32 @@ func (m *mockSemanticClient) ClassifyIntent(_ context.Context, _ *services.Inten
 	return m.response, m.err
 }
 
+type mockAnomalyDetector struct {
+	anomalous bool
+}
+
+func (m *mockAnomalyDetector) IsAnomalous(_ float64) bool { return m.anomalous }
+func (m *mockAnomalyDetector) Record(_ float64)           {}
+
+type mockMetricsRecorder struct{}
+
+func (m *mockMetricsRecorder) RecordAnomaly() {}
+
 // makeService builds a DecisionService with mock dependencies
 func makeService(blastRadius float64, impacted []string, scores *services.ScoringResponse) *services.DecisionService {
 	topology := &mockTopologyClient{blastRadius: blastRadius, impactedServices: impacted}
 	scoring := &mockScoringClient{response: scores}
 	semantic := &mockSemanticClient{response: &services.IntentResponse{Intent: "feature", Confidence: 0.9, Reasoning: "test"}}
+	anomaly := &mockAnomalyDetector{anomalous: false}
+	metrics := &mockMetricsRecorder{}
 	return services.NewDecisionService(
 		topology,
 		semantic,
 		scoring,
 		services.NewNoopDeploymentRepository(),
 		services.NewNoopRiskScoreRepository(),
+		anomaly,
+		metrics,
 	)
 }
 

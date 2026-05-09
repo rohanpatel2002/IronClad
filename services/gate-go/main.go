@@ -23,6 +23,7 @@ import (
 	"github.com/rohanpatel2002/ironclad/services/gate-go/handlers"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/analytics"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/audit"
+	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/governance"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/auth"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/cost"
 	"github.com/rohanpatel2002/ironclad/services/gate-go/pkg/logger"
@@ -143,13 +144,18 @@ func main() {
 		log.Info("Using in-memory no-op repositories", "reason", "DATABASE_URL not set")
 	}
 
-	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo)
-	
 	// Autonomous Security Components
 	anomalyDetector := analytics.NewDecisionStats(1 * time.Hour)
 	quarantineMgr := soar.NewQuarantineManager(os.Getenv("OPA_URL"))
 	intelClient := threat.NewIntelClient()
 	costOptimizer := cost.NewOptimizer()
+
+	// Governance Reporting
+	reportGen := governance.NewReportGenerator(deployRepo, auditLogger)
+	govHandler := handlers.NewGovernanceHandler(reportGen)
+
+	metricsRecorder := &PrometheusMetrics{}
+	decisionSvc := services.NewDecisionService(topologyClient, semanticClient, scoringClient, deployRepo, riskRepo, anomalyDetector, metricsRecorder)
 	
 	decisionHandler := handlers.NewDecisionHandler(decisionSvc, auditLogger, anomalyDetector, quarantineMgr, costOptimizer, redisClient)
 	// Inject autonomous components into handler (logic to follow in handler update)
@@ -192,6 +198,7 @@ func main() {
 	v1.Use(handlers.APIKeyMiddleware(apiKeyManager)) // M2M Authentication
 	decisionHandler.RegisterRoutes(v1)
 	webhookHandler.RegisterRoutes(v1)
+	v1.GET("/governance/report", govHandler.GenerateSOC2Report)
 
 	// Protected management routes
 	mgmt := v1.Group("/mgmt", handlers.AuthMiddleware(jwtManager))
@@ -265,6 +272,13 @@ func structuredRequestLogger(log *slog.Logger) gin.HandlerFunc {
 			"request_id", c.GetHeader("X-Request-ID"),
 		)
 	}
+}
+
+// PrometheusMetrics implements services.MetricsRecorder
+type PrometheusMetrics struct{}
+
+func (m *PrometheusMetrics) RecordAnomaly() {
+	handlers.RecordAnomalyMetric()
 }
 
 // Ensure fmt is used
