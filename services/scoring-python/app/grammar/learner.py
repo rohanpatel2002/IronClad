@@ -1,7 +1,11 @@
 import json
 import os
-from typing import List, Dict, Any, Set
-import re
+import logging
+from typing import List, Dict, Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("FailureGrammarLearner")
 
 class FailureGrammarLearner:
     """
@@ -20,10 +24,12 @@ class FailureGrammarLearner:
             try:
                 with open(self.grammar_file, "r") as f:
                     self.signatures = json.load(f)
-            except Exception as e:
-                print(f"Error loading grammar file: {e}")
+                logger.info(f"Loaded {len(self.signatures)} signatures from {self.grammar_file}")
+            except (json.JSONDecodeError, IOError) as e:
+                logger.error(f"Error loading grammar file: {e}. Falling back to defaults.")
                 self.signatures = self._default_grammar()
         else:
+            logger.info("Grammar file not found. Initializing with defaults.")
             self.signatures = self._default_grammar()
             self._save_grammar()
 
@@ -32,8 +38,9 @@ class FailureGrammarLearner:
         try:
             with open(self.grammar_file, "w") as f:
                 json.dump(self.signatures, f, indent=4)
-        except Exception as e:
-            print(f"Error saving grammar file: {e}")
+            logger.debug(f"Saved grammar to {self.grammar_file}")
+        except IOError as e:
+            logger.error(f"Error saving grammar file: {e}")
 
     def _default_grammar(self) -> List[Dict[str, Any]]:
         """Returns a baseline set of failure signatures."""
@@ -67,6 +74,7 @@ class FailureGrammarLearner:
     def add_signature(self, signature: Dict[str, Any]):
         """Adds a new failure signature to the grammar."""
         self.signatures.append(signature)
+        logger.info(f"Added new signature: {signature.get('name', 'unnamed')}")
         self._save_grammar()
 
     def get_signatures(self) -> List[Dict[str, Any]]:

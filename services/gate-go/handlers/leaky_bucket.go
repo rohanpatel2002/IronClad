@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ type LeakyBucket struct {
 	capacity   int           // max capacity of the bucket
 	buckets    map[string]*bucket
 	mu         sync.Mutex
+	stop       chan struct{}
 }
 
 type bucket struct {
@@ -21,12 +23,51 @@ type bucket struct {
 	lastUpdate time.Time
 }
 
-// NewLeakyBucket creates a new leaky bucket limiter.
+// NewLeakyBucket creates a new leaky bucket limiter and starts a background cleanup routine.
 func NewLeakyBucket(rate time.Duration, capacity int) *LeakyBucket {
-	return &LeakyBucket{
+	lb := &LeakyBucket{
 		rate:     rate,
 		capacity: capacity,
 		buckets:  make(map[string]*bucket),
+		stop:     make(chan struct{}),
+	}
+	go lb.cleanupLoop()
+	return lb
+}
+
+// Stop shuts down the background cleanup routine.
+func (lb *LeakyBucket) Stop() {
+	close(lb.stop)
+}
+
+func (lb *LeakyBucket) cleanupLoop() {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			lb.cleanup()
+		case <-lb.stop:
+			return
+		}
+	}
+}
+
+func (lb *LeakyBucket) cleanup() {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+
+	now := time.Now()
+	removed := 0
+	for ip, b := range lb.buckets {
+		// If the bucket is empty and hasn't been updated in 1 hour, remove it
+		if b.count == 0 && now.Sub(b.lastUpdate) > 1*time.Hour {
+			delete(lb.buckets, ip)
+			removed++
+		}
+	}
+	if removed > 0 {
+		slog.Info("Cleaned up stale rate limit buckets", "count", removed)
 	}
 }
 
