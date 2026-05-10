@@ -1,36 +1,65 @@
+import logging
 import numpy as np
 import chromadb
 from chromadb.utils import embedding_functions
+from typing import List, Dict, Any, Optional
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("EmbeddingGenerator")
 
 class EmbeddingGenerator:
     """
     Generates semantic embeddings for code snippets and failure logs
     to enable vector-based pattern matching of security incidents.
     """
-    def __init__(self, chroma_host="chromadb", chroma_port=8000):
-        self.client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
-        self.embed_fn = embedding_functions.DefaultEmbeddingFunction()
-        self.collection = self.client.get_or_create_collection(
-            name="security_incidents",
-            embedding_function=self.embed_fn
-        )
+    def __init__(self, chroma_host: str = "chromadb", chroma_port: int = 8000):
+        try:
+            logger.info(f"Connecting to ChromaDB at {chroma_host}:{chroma_port}")
+            self.client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
+            self.embed_fn = embedding_functions.DefaultEmbeddingFunction()
+            self.collection = self.client.get_or_create_collection(
+                name="security_incidents",
+                embedding_function=self.embed_fn
+            )
+            logger.info("Successfully connected to ChromaDB and initialized collection 'security_incidents'")
+        except Exception as e:
+            logger.error(f"Failed to initialize ChromaDB client: {e}")
+            # In a production scenario, we might want to retry or fail fast
+            raise
 
-    def store_incident(self, incident_id, content, metadata):
+    def store_incident(self, incident_id: str, content: str, metadata: Dict[str, Any]):
         """
-        Stores an incident in the vector database.
+        Stores an incident in the vector database with error handling.
         """
-        self.collection.add(
-            documents=[content],
-            metadatas=[metadata],
-            ids=[incident_id]
-        )
+        try:
+            if not content:
+                logger.warning(f"Attempted to store empty content for incident {incident_id}")
+                return
 
-    def find_similar_incidents(self, content, n_results=5):
+            self.collection.add(
+                documents=[content],
+                metadatas=[metadata],
+                ids=[incident_id]
+            )
+            logger.debug(f"Successfully stored incident {incident_id}")
+        except Exception as e:
+            logger.error(f"Error storing incident {incident_id}: {e}")
+
+    def find_similar_incidents(self, content: str, n_results: int = 5) -> Dict[str, Any]:
         """
         Finds incidents with similar semantic profiles.
         """
-        results = self.collection.query(
-            query_texts=[content],
-            n_results=n_results
-        )
-        return results
+        try:
+            if not content:
+                return {"ids": [], "distances": [], "documents": []}
+
+            results = self.collection.query(
+                query_texts=[content],
+                n_results=n_results
+            )
+            logger.info(f"Found {len(results.get('ids', [[]])[0])} similar incidents")
+            return results
+        except Exception as e:
+            logger.error(f"Error querying similar incidents: {e}")
+            return {"ids": [], "distances": [], "documents": [], "error": str(e)}
