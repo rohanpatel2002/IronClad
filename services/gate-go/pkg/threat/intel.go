@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -92,6 +93,7 @@ type IntelClient struct {
 	maliciousIPs map[string]bool
 	client       *http.Client
 	sources      []IntelSource
+	stop         chan struct{}
 }
 
 // NewIntelClient initializes a client with multiple sources.
@@ -100,6 +102,7 @@ func NewIntelClient() *IntelClient {
 		maliciousIPs: make(map[string]bool),
 		client:       &http.Client{Timeout: 10 * time.Second},
 		sources:      []IntelSource{&AbuseCHSource{}, &IpsumSource{}},
+		stop:         make(chan struct{}),
 	}
 	// Initial fetch
 	c.refreshFeeds()
@@ -107,10 +110,22 @@ func NewIntelClient() *IntelClient {
 	return c
 }
 
+// Stop shuts down the background refresh loop.
+func (c *IntelClient) Stop() {
+	close(c.stop)
+}
+
 func (c *IntelClient) refreshLoop() {
 	ticker := time.NewTicker(1 * time.Hour)
-	for range ticker.C {
-		c.refreshFeeds()
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			c.refreshFeeds()
+		case <-c.stop:
+			slog.Info("Threat Intel refresh loop stopped")
+			return
+		}
 	}
 }
 
@@ -128,7 +143,7 @@ func (c *IntelClient) refreshFeeds() {
 			defer wg.Done()
 			ips, err := src.FetchIPs(ctx, c.client)
 			if err != nil {
-				fmt.Printf("Error fetching from %s: %v\n", src.Name(), err)
+				slog.Error("Error fetching from threat source", "source", src.Name(), "error", err)
 				return
 			}
 			mu.Lock()
@@ -136,7 +151,7 @@ func (c *IntelClient) refreshFeeds() {
 				newIPs[ip] = true
 			}
 			mu.Unlock()
-			fmt.Printf("Fetched %d IPs from %s\n", len(ips), src.Name())
+			slog.Debug("Fetched IPs from threat source", "count", len(ips), "source", src.Name())
 		}(s)
 	}
 
@@ -145,7 +160,7 @@ func (c *IntelClient) refreshFeeds() {
 	c.mu.Lock()
 	c.maliciousIPs = newIPs
 	c.mu.Unlock()
-	fmt.Printf("Total malicious IPs tracked: %d\n", len(newIPs))
+	slog.Info("Threat database updated", "total_malicious_ips", len(newIPs))
 }
 
 // IsMalicious returns true if the IP is found in the global threat database.

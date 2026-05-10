@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -36,6 +37,7 @@ func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 	// Check DB
 	if h.db != nil {
 		if err := h.db.PingContext(ctx); err != nil {
+			slog.Warn("Health check failed: database unavailable", "error", err)
 			issues["database"] = err.Error()
 		}
 	}
@@ -43,6 +45,7 @@ func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 	// Check Redis
 	if h.redis != nil {
 		if err := h.redis.Ping(ctx).Err(); err != nil {
+			slog.Warn("Health check failed: redis unavailable", "error", err)
 			issues["redis"] = err.Error()
 		}
 	}
