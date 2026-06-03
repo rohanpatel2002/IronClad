@@ -30,6 +30,7 @@ func (s *AbuseCHSource) FetchIPs(ctx context.Context, client *http.Client) (map[
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", "IronClad-ThreatIntel-Bot/1.0 (https://github.com/rohanpatel2002/IronClad)")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -61,6 +62,7 @@ func (s *IpsumSource) FetchIPs(ctx context.Context, client *http.Client) (map[st
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", "IronClad-ThreatIntel-Bot/1.0 (https://github.com/rohanpatel2002/IronClad)")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
