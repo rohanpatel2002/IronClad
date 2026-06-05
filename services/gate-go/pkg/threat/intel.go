@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ func (s *AbuseCHSource) FetchIPs(ctx context.Context, client *http.Client) (map[
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", "IronClad-ThreatIntel-Bot/1.0 (https://github.com/rohanpatel2002/IronClad)")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -61,6 +63,7 @@ func (s *IpsumSource) FetchIPs(ctx context.Context, client *http.Client) (map[st
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("User-Agent", "IronClad-ThreatIntel-Bot/1.0 (https://github.com/rohanpatel2002/IronClad)")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -91,6 +94,7 @@ func (s *IpsumSource) FetchIPs(ctx context.Context, client *http.Client) (map[st
 type IntelClient struct {
 	mu           sync.RWMutex
 	maliciousIPs map[string]bool
+	maliciousSubnets []*net.IPNet
 	client       *http.Client
 	sources      []IntelSource
 	stop         chan struct{}
@@ -131,6 +135,8 @@ func (c *IntelClient) refreshLoop() {
 
 func (c *IntelClient) refreshFeeds() {
 	newIPs := make(map[string]bool)
+	var newSubnets []*net.IPNet
+	var subnetMu sync.Mutex
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
@@ -148,7 +154,15 @@ func (c *IntelClient) refreshFeeds() {
 			}
 			mu.Lock()
 			for ip := range ips {
-				newIPs[ip] = true
+				if strings.Contains(ip, "/") {
+					if _, ipnet, err := net.ParseCIDR(ip); err == nil {
+						subnetMu.Lock()
+						newSubnets = append(newSubnets, ipnet)
+						subnetMu.Unlock()
+					}
+				} else {
+					newIPs[ip] = true
+				}
 			}
 			mu.Unlock()
 			slog.Debug("Fetched IPs from threat source", "count", len(ips), "source", src.Name())
@@ -159,13 +173,30 @@ func (c *IntelClient) refreshFeeds() {
 
 	c.mu.Lock()
 	c.maliciousIPs = newIPs
+	c.maliciousSubnets = newSubnets
 	c.mu.Unlock()
-	slog.Info("Threat database updated", "total_malicious_ips", len(newIPs))
+	slog.Info("Threat database updated", "total_malicious_ips", len(newIPs), "total_malicious_subnets", len(newSubnets))
 }
 
-// IsMalicious returns true if the IP is found in the global threat database.
+// IsMalicious returns true if the IP is found in the global threat database or falls within a blacklisted subnet.
 func (c *IntelClient) IsMalicious(ip string) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.maliciousIPs[ip]
+	
+	if c.maliciousIPs[ip] {
+		return true
+	}
+
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
+
+	for _, subnet := range c.maliciousSubnets {
+		if subnet.Contains(parsedIP) {
+			return true
+		}
+	}
+
+	return false
 }
