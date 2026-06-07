@@ -79,3 +79,4 @@ func (p *Publisher) Close() {
 		p.conn.Close()
 	}
 }
+
