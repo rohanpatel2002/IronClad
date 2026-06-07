@@ -66,4 +66,3 @@ func (m *APIKeyManager) ValidateKey(key string) (string, error) {
 
 	return k.TenantID, nil
 }
-
