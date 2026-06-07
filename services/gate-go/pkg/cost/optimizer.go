@@ -33,3 +33,4 @@ func (o *Optimizer) GetNextWindow(now time.Time) time.Time {
 	// Move to peak end + 1 hour
 	return time.Date(now.Year(), now.Month(), now.Day(), o.PeakEnd+1, 0, 0, 0, time.UTC)
 }
+
