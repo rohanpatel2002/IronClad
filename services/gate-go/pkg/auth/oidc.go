@@ -41,3 +41,4 @@ func NewOIDCProvider(ctx context.Context) (*OIDCProvider, error) {
 func (p *OIDCProvider) VerifyToken(ctx context.Context, rawToken string) (*oidc.IDToken, error) {
 	return p.verifier.Verify(ctx, rawToken)
 }
+
