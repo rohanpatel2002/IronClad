@@ -125,4 +125,3 @@ func (t *TopologyClient) GetBlastRadius(ctx context.Context, service string, cha
 
 	return res.BlastRadiusScore, res.ImpactedServices, nil
 }
-
