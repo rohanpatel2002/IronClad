@@ -42,3 +42,4 @@ func LoadTLSConfig(cfg Config) (*tls.Config, error) {
 		ServerName:   cfg.ServerName,
 	}, nil
 }
+
