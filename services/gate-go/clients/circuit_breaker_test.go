@@ -109,3 +109,4 @@ func TestHTTPClientWithCircuitBreaker_FailsOnServerError(t *testing.T) {
 		t.Fatal("expected error on 500 response")
 	}
 }
+
