@@ -290,3 +290,4 @@ func (m *PrometheusMetrics) RecordAnomaly() {
 
 // Ensure fmt is used
 var _ = fmt.Sprintf
+
