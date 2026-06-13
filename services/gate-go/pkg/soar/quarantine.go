@@ -50,4 +50,3 @@ func (m *QuarantineManager) QuarantineService(ctx context.Context, serviceID str
 
 	return nil
 }
-
