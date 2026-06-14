@@ -73,4 +73,3 @@ func TestLeakyBucket_Cleanup(t *testing.T) {
 	assert.Contains(t, lb.buckets, "1.1.1.1")
 	assert.NotContains(t, lb.buckets, "2.2.2.2")
 }
-
