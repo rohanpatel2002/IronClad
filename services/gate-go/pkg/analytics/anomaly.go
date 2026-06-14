@@ -60,3 +60,4 @@ func (s *DecisionStats) IsAnomalous(value float64) bool {
 	zScore := math.Abs(value-s.Mean) / stdDev
 	return zScore > 3.0
 }
+
