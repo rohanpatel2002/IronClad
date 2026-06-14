@@ -205,3 +205,4 @@ func (g *DependencyGraph) computeScore(service string, impacted []string) float6
 	}
 	return score
 }
+
