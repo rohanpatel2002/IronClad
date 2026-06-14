@@ -48,4 +48,3 @@ func DoWithExponentialBackoff(ctx context.Context, maxRetries int, initialBackof
 
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
-
