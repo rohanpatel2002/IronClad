@@ -41,3 +41,4 @@ func (r *PostgresRiskScoreRepository) Store(ctx context.Context, record *models.
 	}
 	return nil
 }
+
