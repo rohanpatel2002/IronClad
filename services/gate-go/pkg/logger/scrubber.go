@@ -45,3 +45,4 @@ func ScrubMap(input map[string]interface{}) map[string]interface{} {
 	}
 	return output
 }
+
