@@ -58,4 +58,3 @@ func TestRecordDecisionMetric_DoesNotPanic(t *testing.T) {
 	handlers.RecordDecisionMetric("WARN")
 	handlers.RecordDecisionMetric("BLOCK")
 }
-
