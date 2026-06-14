@@ -67,3 +67,4 @@ func (s *testSource) FetchIPs(ctx context.Context, client *http.Client) (map[str
 	}
 	return ips, nil
 }
+
