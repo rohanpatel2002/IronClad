@@ -54,4 +54,3 @@ func blockRequest(c *gin.Context, reason string) {
 		"reason":  reason,
 	})
 }
-
