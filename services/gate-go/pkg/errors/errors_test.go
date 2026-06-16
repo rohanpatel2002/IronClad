@@ -61,3 +61,4 @@ func TestRespond_WithGenericError(t *testing.T) {
 		t.Errorf("unexpected response body: %+v", resp)
 	}
 }
+
