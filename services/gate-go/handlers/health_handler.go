@@ -60,3 +60,4 @@ func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "UP"})
 }
+
