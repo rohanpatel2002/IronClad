@@ -53,4 +53,3 @@ func AuthMiddleware(jwtManager *auth.JWTManager, blacklist *auth.TokenBlacklist)
 		c.Next()
 	}
 }
-
