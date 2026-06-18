@@ -156,3 +156,4 @@ func (p *defaultGraphProvider) GetGraph(ctx context.Context) (*graph.DependencyG
 
 // Ensure fmt is used
 var _ = fmt.Sprintf
+
