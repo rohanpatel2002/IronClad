@@ -36,3 +36,4 @@ func InitTracer(serviceName string) (*sdktrace.TracerProvider, error) {
 	otel.SetTracerProvider(tp)
 	return tp, nil
 }
+
