@@ -76,3 +76,4 @@ func (h *GovernanceHandler) ExportSOC2CSV(c *gin.Context) {
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=SOC2-audit-%s.csv", start.Format(time.DateOnly)))
 	c.Data(http.StatusOK, "text/csv", data)
 }
+
