@@ -103,4 +103,3 @@ func (b *K8sGraphBuilder) StartBackgroundRefresher(ctx context.Context) {
 		}
 	}()
 }
-
