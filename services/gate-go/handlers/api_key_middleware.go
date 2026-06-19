@@ -31,4 +31,3 @@ func APIKeyMiddleware(manager *auth.APIKeyManager) gin.HandlerFunc {
 		c.Next()
 	}
 }
-
