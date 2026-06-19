@@ -108,4 +108,3 @@ func (lb *LeakyBucket) Middleware() gin.HandlerFunc {
 		}
 	}
 }
-
