@@ -22,4 +22,3 @@ func New() *slog.Logger {
 
 	return slog.New(handler)
 }
-
