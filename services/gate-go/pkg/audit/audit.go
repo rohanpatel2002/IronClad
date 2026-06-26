@@ -54,3 +54,4 @@ func (l *AuditLogger) Log(ctx context.Context, rec LogRecord) {
 		slog.Error("Failed to persist audit log", "error", err, "action", rec.Action)
 	}
 }
+
