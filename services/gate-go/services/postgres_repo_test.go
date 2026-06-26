@@ -83,3 +83,4 @@ func TestPostgresRepositories(t *testing.T) {
 		t.Fatalf("failed to store risk score: %v", err)
 	}
 }
+
