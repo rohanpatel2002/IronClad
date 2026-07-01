@@ -55,4 +55,3 @@ func (m *SLOMonitor) Reset() {
 	m.FailedReqs = 0
 	m.WindowStart = time.Now()
 }
-
