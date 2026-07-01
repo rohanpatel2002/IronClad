@@ -121,3 +121,4 @@ func (g *ReportGenerator) GenerateSOC2CSV(ctx context.Context, start, end time.T
 func (r *ComplianceReport) ExportAsJSON() ([]byte, error) {
 	return json.MarshalIndent(r, "", "  ")
 }
+
