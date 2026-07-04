@@ -98,3 +98,4 @@ func (c *K8sClient) GetServiceTopology(ctx context.Context) ([]ServiceMetadata, 
 
 	return metadata, nil
 }
+
