@@ -50,3 +50,4 @@ func Respond(c *gin.Context, err error) {
 		Message: "An unexpected error occurred",
 	})
 }
+
