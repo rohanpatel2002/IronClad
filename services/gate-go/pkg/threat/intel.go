@@ -240,5 +240,3 @@ func (c *IntelClient) IsMalicious(ip string) bool {
 
 	return false
 }
-
-
