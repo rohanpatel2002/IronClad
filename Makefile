@@ -114,3 +114,7 @@ help:
 .PHONY: test-threat
 test-threat:
 	cd services/gate-go && go test ./pkg/threat/...
+
+.PHONY: test-threat
+test-threat:
+	cd services/gate-go && go test ./pkg/threat/...
