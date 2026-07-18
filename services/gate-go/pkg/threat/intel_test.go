@@ -86,10 +86,10 @@ func (s *testSource) FetchIPs(ctx context.Context, client *http.Client) (map[str
 	ips := make(map[string]bool)
 	if s.format == "plain" {
 		ips["1.2.3.4"] = true
+		ips["5.6.7.8"] = true
 		ips["10.0.0.0/24"] = true
 	} else {
 		ips["9.10.11.12"] = true
 	}
 	return ips, nil
 }
-
