@@ -110,3 +110,7 @@ clean:
 help:
 	@echo "IRONCLAD Makefile commands:"
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /' | column -t -s ':'
+
+.PHONY: test-all
+test-all:
+	cd services/gate-go && go test ./...
