@@ -293,4 +293,10 @@ For now:
 This project is licensed under the **Apache License 2.0**. See `LICENSE` for details.
 
 
-- Run `make test-all` for complete package verification.
+## Threat Intel
+- Automated retries with backoff
+- Real-time operational metrics
+
+## Threat Intel
+- Automated retries with backoff
+- Real-time operational metrics

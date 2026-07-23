@@ -111,6 +111,10 @@ help:
 	@echo "IRONCLAD Makefile commands:"
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /' | column -t -s ':'
 
-.PHONY: test-all
-test-all:
-	cd services/gate-go && go test ./...
+.PHONY: test-threat
+test-threat:
+	cd services/gate-go && go test ./pkg/threat/...
+
+.PHONY: test-threat
+test-threat:
+	cd services/gate-go && go test ./pkg/threat/...
