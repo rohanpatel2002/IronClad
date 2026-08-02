@@ -52,13 +52,31 @@ func TestIntelClient_IsMalicious(t *testing.T) {
 	if metrics.SuccessfulFetchCount != 2 {
 		t.Errorf("Expected SuccessfulFetchCount to be 2, got %d", metrics.SuccessfulFetchCount)
 	}
-	if metrics.TotalIPsFetched != 2 {
-		t.Errorf("Expected TotalIPsFetched to be 2, got %d", metrics.TotalIPsFetched)
+	if metrics.TotalIPsFetched != 3 {
+		t.Errorf("Expected TotalIPsFetched to be 3, got %d", metrics.TotalIPsFetched)
 	}
 	if metrics.TotalSubnetsFetched != 1 {
 		t.Errorf("Expected TotalSubnetsFetched to be 1, got %d", metrics.TotalSubnetsFetched)
 	}
 }
+
+func TestIntelClient_TrustedCIDRWhitelist(t *testing.T) {
+	client := &IntelClient{
+		maliciousIPs: map[string]bool{"1.2.3.4": true},
+	}
+	if !client.IsMalicious("1.2.3.4") {
+		t.Errorf("Expected 1.2.3.4 to be malicious initially")
+	}
+
+	if err := client.AddTrustedCIDR("1.2.3.0/24"); err != nil {
+		t.Fatalf("Failed to add trusted CIDR: %v", err)
+	}
+
+	if client.IsMalicious("1.2.3.4") {
+		t.Errorf("Expected 1.2.3.4 to be whitelisted after adding trusted CIDR")
+	}
+}
+
 
 func TestIntelSource_FetchWithRetry_Failure(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
