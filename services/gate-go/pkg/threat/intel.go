@@ -113,6 +113,7 @@ type IntelClient struct {
 	mu               sync.RWMutex
 	maliciousIPs     map[string]bool
 	maliciousSubnets []*net.IPNet
+	trustedSubnets   []*net.IPNet
 	client           *http.Client
 	sources          []IntelSource
 	stop             chan struct{}
@@ -122,14 +123,28 @@ type IntelClient struct {
 // NewIntelClient initializes a client with multiple sources.
 func NewIntelClient() *IntelClient {
 	c := &IntelClient{
-		maliciousIPs: make(map[string]bool),
-		client:       &http.Client{Timeout: 10 * time.Second},
-		sources:      []IntelSource{&AbuseCHSource{}, &IpsumSource{}},
-		stop:         make(chan struct{}),
+		maliciousIPs:   make(map[string]bool),
+		trustedSubnets: make([]*net.IPNet, 0),
+		client:         &http.Client{Timeout: 10 * time.Second},
+		sources:        []IntelSource{&AbuseCHSource{}, &IpsumSource{}},
+		stop:           make(chan struct{}),
 	}
 	c.refreshFeeds()
 	go c.refreshLoop()
 	return c
+}
+
+// AddTrustedCIDR registers a CIDR subnet that should never be marked as malicious.
+func (c *IntelClient) AddTrustedCIDR(cidr string) error {
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return fmt.Errorf("invalid CIDR: %w", err)
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.trustedSubnets = append(c.trustedSubnets, ipnet)
+	return nil
 }
 
 // Stop shuts down the background refresh loop.
@@ -218,6 +233,7 @@ func (c *IntelClient) refreshFeeds() {
 }
 
 // IsMalicious returns true if the IP is valid and found in the global threat database or falls within a blacklisted subnet.
+// It returns false if the IP matches a trusted CIDR whitelist.
 func (c *IntelClient) IsMalicious(ip string) bool {
 	trimmed := strings.TrimSpace(ip)
 	parsedIP := net.ParseIP(trimmed)
@@ -227,6 +243,13 @@ func (c *IntelClient) IsMalicious(ip string) bool {
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	// Check trusted subnets first (whitelist takes priority)
+	for _, trusted := range c.trustedSubnets {
+		if trusted.Contains(parsedIP) {
+			return false
+		}
+	}
 
 	if c.maliciousIPs[trimmed] {
 		return true
@@ -240,3 +263,4 @@ func (c *IntelClient) IsMalicious(ip string) bool {
 
 	return false
 }
+
