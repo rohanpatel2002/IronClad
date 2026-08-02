@@ -56,3 +56,32 @@ func TestBearerAuthMiddleware(t *testing.T) {
 		t.Errorf("Expected 200 OK for valid bearer token, got %d", rec2.Code)
 	}
 }
+
+func TestRateLimiterMiddleware(t *testing.T) {
+	limiter := NewIPRateLimiter(2)
+	handler := RateLimiterMiddleware(limiter)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req1 := httptest.NewRequest(http.MethodGet, "/", nil)
+	req1.RemoteAddr = "192.168.1.100:12345"
+
+	rec1 := httptest.NewRecorder()
+	handler.ServeHTTP(rec1, req1)
+	if rec1.Code != http.StatusOK {
+		t.Errorf("Expected request 1 to succeed, got %d", rec1.Code)
+	}
+
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req1)
+	if rec2.Code != http.StatusOK {
+		t.Errorf("Expected request 2 to succeed, got %d", rec2.Code)
+	}
+
+	rec3 := httptest.NewRecorder()
+	handler.ServeHTTP(rec3, req1)
+	if rec3.Code != http.StatusTooManyRequests {
+		t.Errorf("Expected request 3 to be rate limited (429), got %d", rec3.Code)
+	}
+}
+
