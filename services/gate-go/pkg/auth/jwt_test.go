@@ -6,23 +6,37 @@ import (
 )
 
 func TestJWTManager_GenerateAndVerify(t *testing.T) {
-	manager := NewJWTManager()
+	mgr := NewJWTManager()
+	tokenStr, err := mgr.Generate("alice", "admin")
+	if err != nil {
+		t.Fatalf("Failed to generate JWT: %v", err)
+	}
 
-	token, err := manager.Generate("testuser", "admin")
+	claims, err := mgr.Verify(tokenStr)
+	if err != nil {
+		t.Fatalf("Failed to verify JWT: %v", err)
+	}
+
+	if claims.Username != "alice" || claims.Role != "admin" {
+		t.Errorf("Unexpected claims: username=%s role=%s", claims.Username, claims.Role)
+	}
+}
+
+func TestJWTManager_InvalidIssuerOrAudience(t *testing.T) {
+	mgr1 := NewJWTManager()
+	mgr1.SetIssuerAudience("issuer-1", "aud-1")
+
+	tokenStr, err := mgr1.Generate("bob", "user")
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
 
-	claims, err := manager.Verify(token)
-	if err != nil {
-		t.Fatalf("Failed to verify token: %v", err)
-	}
+	mgr2 := NewJWTManager()
+	mgr2.SetIssuerAudience("issuer-2", "aud-1")
 
-	if claims.Username != "testuser" {
-		t.Errorf("Expected username testuser, got %s", claims.Username)
-	}
-	if claims.Role != "admin" {
-		t.Errorf("Expected role admin, got %s", claims.Role)
+	_, err = mgr2.Verify(tokenStr)
+	if err == nil {
+		t.Errorf("Expected verification error for mismatched issuer")
 	}
 }
 
@@ -51,3 +65,4 @@ func TestJWTManager_ExpiredToken(t *testing.T) {
 		t.Errorf("Expected ErrExpiredToken, got %v", err)
 	}
 }
+
