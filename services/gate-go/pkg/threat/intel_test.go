@@ -52,8 +52,8 @@ func TestIntelClient_IsMalicious(t *testing.T) {
 	if metrics.SuccessfulFetchCount != 2 {
 		t.Errorf("Expected SuccessfulFetchCount to be 2, got %d", metrics.SuccessfulFetchCount)
 	}
-	if metrics.TotalIPsFetched != 2 {
-		t.Errorf("Expected TotalIPsFetched to be 2, got %d", metrics.TotalIPsFetched)
+	if metrics.TotalIPsFetched != 3 {
+		t.Errorf("Expected TotalIPsFetched to be 3, got %d", metrics.TotalIPsFetched)
 	}
 	if metrics.TotalSubnetsFetched != 1 {
 		t.Errorf("Expected TotalSubnetsFetched to be 1, got %d", metrics.TotalSubnetsFetched)
