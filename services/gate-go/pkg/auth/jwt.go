@@ -25,6 +25,8 @@ type Claims struct {
 type JWTManager struct {
 	secretKey     []byte
 	tokenDuration time.Duration
+	issuer        string
+	audience      string
 }
 
 // NewJWTManager creates a new JWT manager.
@@ -33,10 +35,26 @@ func NewJWTManager() *JWTManager {
 	if secret == "" {
 		secret = "ironclad-secret-key-change-me-in-production"
 	}
+	iss := os.Getenv("JWT_ISSUER")
+	if iss == "" {
+		iss = "ironclad-gate"
+	}
+	aud := os.Getenv("JWT_AUDIENCE")
+	if aud == "" {
+		aud = "ironclad-services"
+	}
 	return &JWTManager{
 		secretKey:     []byte(secret),
 		tokenDuration: 24 * time.Hour,
+		issuer:        iss,
+		audience:      aud,
 	}
+}
+
+// SetIssuerAudience updates the issuer and audience settings.
+func (m *JWTManager) SetIssuerAudience(issuer, audience string) {
+	m.issuer = issuer
+	m.audience = audience
 }
 
 // Generate creates a new token for a specific user.
@@ -46,6 +64,8 @@ func (m *JWTManager) Generate(username, role string) (string, error) {
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+			Issuer:    m.issuer,
+			Audience:  jwt.ClaimStrings{m.audience},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.tokenDuration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
@@ -67,6 +87,8 @@ func (m *JWTManager) Verify(tokenStr string) (*Claims, error) {
 			}
 			return m.secretKey, nil
 		},
+		jwt.WithIssuer(m.issuer),
+		jwt.WithAudience(m.audience),
 	)
 
 	if err != nil {
@@ -83,3 +105,4 @@ func (m *JWTManager) Verify(tokenStr string) (*Claims, error) {
 
 	return claims, nil
 }
+
