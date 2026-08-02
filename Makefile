@@ -111,10 +111,23 @@ help:
 	@echo "IRONCLAD Makefile commands:"
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /' | column -t -s ':'
 
-.PHONY: test-threat
+.PHONY: test-threat test-auth test-audit test-mtls test-security security-audit
 test-threat:
-	cd services/gate-go && go test ./pkg/threat/...
+	cd services/gate-go && go test ./pkg/threat/... -v
 
-.PHONY: test-threat
-test-threat:
-	cd services/gate-go && go test ./pkg/threat/...
+test-auth:
+	cd services/gate-go && go test ./pkg/auth/... -v
+
+test-audit:
+	cd services/gate-go && go test ./pkg/audit/... -v
+
+test-mtls:
+	cd services/gate-go && go test ./pkg/mtls/... -v
+
+test-security: test-auth test-audit test-mtls test-threat
+
+security-audit: test-security
+	@echo "▶ Running security audit..."
+	cd services/gate-go && go vet ./pkg/auth/... ./pkg/audit/... ./pkg/mtls/... ./pkg/threat/...
+	@echo "✔ Security audit passed successfully"
+
