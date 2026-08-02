@@ -60,6 +60,24 @@ func TestIntelClient_IsMalicious(t *testing.T) {
 	}
 }
 
+func TestIntelClient_TrustedCIDRWhitelist(t *testing.T) {
+	client := &IntelClient{
+		maliciousIPs: map[string]bool{"1.2.3.4": true},
+	}
+	if !client.IsMalicious("1.2.3.4") {
+		t.Errorf("Expected 1.2.3.4 to be malicious initially")
+	}
+
+	if err := client.AddTrustedCIDR("1.2.3.0/24"); err != nil {
+		t.Fatalf("Failed to add trusted CIDR: %v", err)
+	}
+
+	if client.IsMalicious("1.2.3.4") {
+		t.Errorf("Expected 1.2.3.4 to be whitelisted after adding trusted CIDR")
+	}
+}
+
+
 func TestIntelSource_FetchWithRetry_Failure(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
