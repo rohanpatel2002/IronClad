@@ -205,3 +205,86 @@ func (g *DependencyGraph) computeScore(service string, impacted []string) float6
 	}
 	return score
 }
+
+// DetectCycles finds any circular dependency loops in the service graph.
+func (g *DependencyGraph) DetectCycles() [][]string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	var cycles [][]string
+	visited := make(map[string]int) // 0: unvisited, 1: visiting, 2: visited
+	path := make([]string, 0)
+
+	var dfs func(node string)
+	dfs = func(node string) {
+		visited[node] = 1
+		path = append(path, node)
+
+		if n, ok := g.nodes[node]; ok {
+			for _, dep := range n.DependsOn {
+				if visited[dep] == 1 {
+					// Cycle detected
+					cycleStart := -1
+					for i, name := range path {
+						if name == dep {
+							cycleStart = i
+							break
+						}
+					}
+					if cycleStart != -1 {
+						cycle := append([]string{}, path[cycleStart:]...)
+						cycle = append(cycle, dep)
+						cycles = append(cycles, cycle)
+					}
+				} else if visited[dep] == 0 {
+					dfs(dep)
+				}
+			}
+		}
+
+		path = path[:len(path)-1]
+		visited[node] = 2
+	}
+
+	for node := range g.nodes {
+		if visited[node] == 0 {
+			dfs(node)
+		}
+	}
+
+	return cycles
+}
+
+// MaxDepth calculates the maximum dependency chain depth starting from a service.
+func (g *DependencyGraph) MaxDepth(service string) int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	visited := make(map[string]bool)
+
+	var dfs func(curr string) int
+	dfs = func(curr string) int {
+		if visited[curr] {
+			return 0
+		}
+		visited[curr] = true
+		defer func() { visited[curr] = false }()
+
+		node, ok := g.nodes[curr]
+		if !ok || len(node.DependsOn) == 0 {
+			return 0
+		}
+
+		maxDep := 0
+		for _, dep := range node.DependsOn {
+			depth := 1 + dfs(dep)
+			if depth > maxDep {
+				maxDep = depth
+			}
+		}
+		return maxDep
+	}
+
+	return dfs(service)
+}
+
