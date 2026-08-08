@@ -113,13 +113,20 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 5 seconds.
+	// Wait for interrupt signal to gracefully shutdown the server.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Info("Shutting down topology server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	timeoutSec := 5
+	if envTimeout := os.Getenv("SHUTDOWN_TIMEOUT_SEC"); envTimeout != "" {
+		if parsed, err := time.ParseDuration(envTimeout + "s"); err == nil {
+			timeoutSec = int(parsed.Seconds())
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Error("Topology server forced to shutdown", "error", err)
