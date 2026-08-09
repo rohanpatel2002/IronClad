@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ironclad-scoring"
+version = "0.1.0"
+description = "IRONCLAD Risk Scoring Engine"
+authors = [{ name = "IRONCLAD Team" }]
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
