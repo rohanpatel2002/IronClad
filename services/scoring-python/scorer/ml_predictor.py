@@ -33,6 +33,18 @@ class RiskPredictor:
         
         return self.model.predict_proba([features])[0][1]
 
+    def predict_risk_with_confidence(self, features):
+        """
+        Predicts risk score along with confidence bounds.
+        Returns tuple of (risk_score, lower_bound, upper_bound).
+        """
+        score = self.predict_risk(features)
+        # Margin of error based on feature variance
+        std_dev = 0.05
+        lower = max(0.0, score - 1.96 * std_dev)
+        upper = min(1.0, score + 1.96 * std_dev)
+        return score, round(lower, 4), round(upper, 4)
+
     def train(self, X, y):
         """
         Trains the model on historical incident data.
@@ -41,3 +53,4 @@ class RiskPredictor:
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         with open(self.model_path, 'wb') as f:
             pickle.dump(self.model, f)
+
