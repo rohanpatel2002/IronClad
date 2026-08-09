@@ -1,6 +1,5 @@
 import json
 import os
-import pika
 import logging
 import signal
 import sys
@@ -28,8 +27,10 @@ class EventProcessor:
         }
 
 def consume_events():
+    import pika
     url = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/')
     queue = 'scoring_events'
+
 
 
     params = pika.URLParameters(url)
