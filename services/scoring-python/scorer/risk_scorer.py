@@ -170,6 +170,26 @@ class RiskScorer:
         self.grammar_learner = FailureGrammarLearner()
         self.grammar_matcher = GrammarMatcher(self.grammar_learner)
 
+    def set_weights(self, blast: float, reversibility: float, timing: float) -> None:
+        """Dynamically update risk axis scoring weights."""
+        total = blast + reversibility + timing
+        if total <= 0:
+            raise ValueError("Weights total must be greater than zero")
+        self.WEIGHTS = {
+            "blast_radius": blast / total,
+            "reversibility": reversibility / total,
+            "timing": timing / total,
+        }
+
+    def reset_weights(self) -> None:
+        """Reset scoring weights to default values."""
+        self.WEIGHTS = {
+            "blast_radius": 0.40,
+            "reversibility": 0.35,
+            "timing": 0.25,
+        }
+
+
     def score(self, req: ScoringRequest) -> ScoringResponse:
         start = time.time()
 
