@@ -43,3 +43,11 @@ func (l *DynamicLimiter) Middleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// SetMaxMemoryMB dynamically configures memory threshold in MB.
+func (l *DynamicLimiter) SetMaxMemoryMB(mb float64) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.maxMemoryPct = mb
+}
+
