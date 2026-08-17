@@ -38,6 +38,17 @@ func New(status int, code, message string) *AppError {
 	}
 }
 
+// BadRequest returns a 400 AppError.
+func BadRequest(message string) *AppError {
+	return New(http.StatusBadRequest, ErrInvalidRequest, message)
+}
+
+// Unauthorized returns a 401 AppError.
+func Unauthorized(message string) *AppError {
+	return New(http.StatusUnauthorized, ErrUnauthorized, message)
+}
+
+
 // Respond sends a standardized JSON error response.
 func Respond(c *gin.Context, err error) {
 	if appErr, ok := err.(*AppError); ok {
