@@ -111,3 +111,17 @@ func (s *testSource) FetchIPs(ctx context.Context, client *http.Client) (map[str
 	}
 	return ips, nil
 }
+
+func TestIntelClient_ForceRefresh(t *testing.T) {
+	client := &IntelClient{
+		maliciousIPs: make(map[string]bool),
+		client:       http.DefaultClient,
+		stop:         make(chan struct{}),
+		sources:      []IntelSource{&testSource{name: "src", format: "plain"}},
+	}
+	client.ForceRefreshFeeds()
+	if !client.IsMalicious("1.2.3.4") {
+		t.Errorf("expected 1.2.3.4 to be marked malicious after force refresh")
+	}
+}
+
