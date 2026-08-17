@@ -108,3 +108,14 @@ func (lb *LeakyBucket) Middleware() gin.HandlerFunc {
 		}
 	}
 }
+
+// GetBucketState returns the current fill level and capacity for an IP.
+func (lb *LeakyBucket) GetBucketState(ip string) (count int, capacity int) {
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+	if b, ok := lb.buckets[ip]; ok {
+		return b.count, lb.capacity
+	}
+	return 0, lb.capacity
+}
+
