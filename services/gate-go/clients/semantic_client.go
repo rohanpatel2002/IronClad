@@ -88,3 +88,9 @@ func (c *SemanticClient) ClassifyIntent(ctx context.Context, req *services.Inten
 
 	return &res, nil
 }
+
+// GetCircuitBreakerState returns the state of the circuit breaker.
+func (c *SemanticClient) GetCircuitBreakerState() string {
+	return c.cb.State().String()
+}
+
