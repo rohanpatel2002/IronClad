@@ -63,3 +63,15 @@ class EmbeddingGenerator:
         except Exception as e:
             logger.error(f"Error querying similar incidents: {e}")
             return {"ids": [], "distances": [], "documents": [], "error": str(e)}
+
+    @staticmethod
+    def generate_dense_vector(text: str, dim: int = 128) -> List[float]:
+        """Generate a deterministic normalized vector representation for text."""
+        seed = sum(ord(c) for c in text) % (2**32 - 1)
+        rng = np.random.RandomState(seed)
+        vec = rng.randn(dim)
+        norm = np.linalg.norm(vec)
+        if norm == 0:
+            return list(np.zeros(dim))
+        return list(vec / norm)
+
