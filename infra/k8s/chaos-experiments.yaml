@@ -3,6 +3,9 @@ kind: NetworkChaos
 metadata:
   name: gate-latency-chaos
   namespace: ironclad
+  labels:
+    testing.ironclad.dev/chaos: resilience
+
 spec:
   action: delay
   mode: one
