@@ -7,7 +7,14 @@ servers:
   - url: http://localhost:8080
     description: Gate API (Local)
 paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service healthy
   /api/v1/decision:
+
     post:
       summary: Evaluate a deployment
       description: Orchestrates topology, semantic, and risk scoring to make a deployment decision.
