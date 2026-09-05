@@ -320,3 +320,9 @@ func max(values ...float64) float64 {
 	return m
 }
 
+// GetDecisionSummary formats a quick diagnostic string for logs.
+func (ds *DecisionService) GetDecisionSummary(d *models.DeploymentDecision) string {
+	return fmt.Sprintf("[%s] %s - Intent: %s, Blast: %.2f", d.DecisionID, d.Decision, d.Intent, d.RiskScores.BlastRadius)
+}
+
+
