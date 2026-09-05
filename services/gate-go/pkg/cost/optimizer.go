@@ -34,3 +34,12 @@ func (o *Optimizer) GetNextWindow(now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), o.PeakEnd+1, 0, 0, 0, time.UTC)
 }
 
+// EstimatedSavings returns estimated cost savings percentage when deferring during peak hours.
+func (o *Optimizer) EstimatedSavings(now time.Time) float64 {
+	if o.ShouldDefer(now) {
+		return 0.35 // 35% savings by deferring
+	}
+	return 0.0
+}
+
+
