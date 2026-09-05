@@ -287,3 +287,15 @@ func TestDecisionIDs_AreUnique(t *testing.T) {
 	}
 }
 
+func TestGetDecisionSummary(t *testing.T) {
+	svc := makeService(0.1, nil, &services.ScoringResponse{BlastRadius: 0.1})
+	req := &models.DeploymentRequest{CommitHash: "abc", Service: "svc", Branch: "main", Environment: "staging"}
+	d, _ := svc.EvaluateDeployment(context.Background(), req)
+
+	summary := svc.GetDecisionSummary(d)
+	if summary == "" {
+		t.Errorf("expected non-empty decision summary string")
+	}
+}
+
+
