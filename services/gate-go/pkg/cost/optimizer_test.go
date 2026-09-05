@@ -29,3 +29,12 @@ func TestOptimizer_GetNextWindow(t *testing.T) {
 		t.Errorf("Expected next window to start at 21:00 UTC, got %d", next.Hour())
 	}
 }
+
+func TestOptimizer_EstimatedSavings(t *testing.T) {
+	opt := NewOptimizer()
+	peakTime := time.Date(2026, 7, 18, 16, 0, 0, 0, time.UTC)
+	if opt.EstimatedSavings(peakTime) != 0.35 {
+		t.Errorf("expected 0.35 estimated savings during peak time")
+	}
+}
+
