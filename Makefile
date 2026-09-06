@@ -40,6 +40,12 @@ test-scoring:
 	@echo "▶ Testing scoring-python..."
 	cd services/scoring-python && PYTHONPATH=. python3 -m pytest tests/ -v
 
+## test-semantic: Run Python semantic tests
+test-semantic:
+	@echo "▶ Testing semantic-python..."
+	cd services/semantic-python && PYTHONPATH=. python3 -m pytest tests/ -v
+
+
 
 # ─── Building ─────────────────────────────────────────────────────────────────
 
