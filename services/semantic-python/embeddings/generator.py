@@ -73,6 +73,7 @@ class EmbeddingGenerator:
         vec = rng.randn(dim)
         norm = np.linalg.norm(vec)
         if norm == 0:
-            return list(np.zeros(dim))
-        return list(vec / norm)
+            return [0.0] * dim
+        return [float(x) for x in (vec / norm)]
+
 
