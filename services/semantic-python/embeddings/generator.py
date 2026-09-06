@@ -1,7 +1,5 @@
 import logging
 import numpy as np
-import chromadb
-from chromadb.utils import embedding_functions
 from typing import List, Dict, Any, Optional
 
 # Configure logging
@@ -15,6 +13,8 @@ class EmbeddingGenerator:
     """
     def __init__(self, chroma_host: str = "chromadb", chroma_port: int = 8000):
         try:
+            import chromadb
+            from chromadb.utils import embedding_functions
             logger.info(f"Connecting to ChromaDB at {chroma_host}:{chroma_port}")
             self.client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
             self.embed_fn = embedding_functions.DefaultEmbeddingFunction()
@@ -25,8 +25,9 @@ class EmbeddingGenerator:
             logger.info("Successfully connected to ChromaDB and initialized collection 'security_incidents'")
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB client: {e}")
-            # In a production scenario, we might want to retry or fail fast
-            raise
+            self.client = None
+            self.collection = None
+
 
     def store_incident(self, incident_id: str, content: str, metadata: Dict[str, Any]):
         """
