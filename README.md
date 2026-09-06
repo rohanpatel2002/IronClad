@@ -1,6 +1,8 @@
 # IRONCLAD
 
-> **A deployment gate that understands intent, not just syntax.**
+> **A deployment gate that understands intent, not just syntax.**  
+> **Release Version:** `v1.2.0` (Production Hardened & Fully Running)
+
 
 IRONCLAD is a semantic deployment risk engine that sits in front of CI/CD promotion and answers one critical question before every release:
 
