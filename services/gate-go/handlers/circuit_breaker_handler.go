@@ -89,3 +89,9 @@ func CircuitBreakerStatusHandler() gin.HandlerFunc {
 	}
 }
 
+// GetRegisteredBreakerCount returns the number of circuit breakers in registry.
+func GetRegisteredBreakerCount() int {
+	return len(circuitBreakerRegistry)
+}
+
+
