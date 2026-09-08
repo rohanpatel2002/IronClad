@@ -45,3 +45,9 @@ func (l *DistLock) Unlock(ctx context.Context) error {
 	}
 	return nil
 }
+
+// GetKey returns the raw lock key name in Redis.
+func (l *DistLock) GetKey() string {
+	return l.key
+}
+

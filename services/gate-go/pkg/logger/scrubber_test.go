@@ -66,3 +66,13 @@ func TestScrubMap(t *testing.T) {
 		t.Errorf("ScrubMap() = %v, want %v", got, expected)
 	}
 }
+
+func TestHasPII(t *testing.T) {
+	if !HasPII("User user@example.com logged in") {
+		t.Errorf("expected HasPII to return true for email string")
+	}
+	if HasPII("Normal log line") {
+		t.Errorf("expected HasPII to return false for clean string")
+	}
+}
+

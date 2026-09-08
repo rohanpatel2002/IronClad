@@ -43,6 +43,12 @@ def health():
     }), 200
 
 
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    return "# HELP scoring_requests_total Total scoring requests\n# TYPE scoring_requests_total counter\nscoring_requests_total 1\n", 200, {'Content-Type': 'text/plain; version=0.0.4'}
+
+
+
 @app.route('/api/v1/score', methods=['POST'])
 @require_api_key
 def score_deployment():

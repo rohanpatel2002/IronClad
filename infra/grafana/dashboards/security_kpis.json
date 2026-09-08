@@ -46,7 +46,9 @@
       "targets": [
         { "expr": "sum(rate(ironclad_gate_anomalous_decisions_total[1h]))" }
       ]
-    }
+      "targets": [
+        { "expr": "sum(rate(ironclad_gate_anomalous_decisions_total[1h]))" }
+      ]
     }
   ],
   "refresh": "10s",
@@ -57,3 +59,4 @@
   "time": { "from": "now-1h", "to": "now" },
   "title": "IRONCLAD Security Platform - Executive KPIs"
 }
+

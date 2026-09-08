@@ -61,3 +61,18 @@ func (s *DecisionStats) IsAnomalous(value float64) bool {
 	return zScore > 3.0
 }
 
+// ZScore returns the Z-score value of a sample relative to running mean and stddev.
+func (s *DecisionStats) ZScore(value float64) float64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.Count < 2 {
+		return 0
+	}
+	stdDev := math.Sqrt(s.M2 / s.Count)
+	if stdDev == 0 {
+		return 0
+	}
+	return math.Abs(value-s.Mean) / stdDev
+}
+
+

@@ -6,7 +6,8 @@ setup(
     description="IRONCLAD semantic intent classifier service",
     author="IRONCLAD Team",
     packages=find_packages(),
-    python_requires=">=3.11",
+    python_requires=">=3.9",
+
     install_requires=[
         "flask==3.0.0",
         "python-dotenv==1.0.0",

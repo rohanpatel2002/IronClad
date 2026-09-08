@@ -38,7 +38,14 @@ test-topology:
 ## test-scoring: Run Python scoring tests
 test-scoring:
 	@echo "▶ Testing scoring-python..."
-	cd services/scoring-python && python -m pytest tests/ -v 2>/dev/null || echo "  No tests yet"
+	cd services/scoring-python && PYTHONPATH=. python3 -m pytest tests/ -v
+
+## test-semantic: Run Python semantic tests
+test-semantic:
+	@echo "▶ Testing semantic-python..."
+	cd services/semantic-python && PYTHONPATH=. python3 -m pytest tests/ -v
+
+
 
 # ─── Building ─────────────────────────────────────────────────────────────────
 

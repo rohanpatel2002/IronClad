@@ -109,3 +109,5 @@ CREATE TABLE audit_logs (
 CREATE INDEX idx_audit_timestamp ON audit_logs(timestamp DESC);
 CREATE INDEX idx_audit_tenant_action ON audit_logs(tenant_id, action);
 CREATE INDEX idx_audit_correlation ON audit_logs(correlation_id);
+CREATE INDEX idx_audit_actor_status ON audit_logs(actor, status);
+

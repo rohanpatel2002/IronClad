@@ -80,3 +80,20 @@ func (p *Publisher) Close() {
 	}
 }
 
+// InMemoryPublisher provides a thread-safe mock event publisher for local testing.
+type InMemoryPublisher struct {
+	Events []interface{}
+}
+
+// NewInMemoryPublisher initializes a memory-backed event publisher.
+func NewInMemoryPublisher() *InMemoryPublisher {
+	return &InMemoryPublisher{Events: make([]interface{}, 0)}
+}
+
+// PublishScoringEvent stores the event in memory.
+func (p *InMemoryPublisher) PublishScoringEvent(ctx context.Context, event interface{}) error {
+	p.Events = append(p.Events, event)
+	return nil
+}
+
+

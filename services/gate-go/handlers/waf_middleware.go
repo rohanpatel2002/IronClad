@@ -54,3 +54,15 @@ func blockRequest(c *gin.Context, reason string) {
 		"reason":  reason,
 	})
 }
+
+// InspectInputString evaluates whether arbitrary input contains malicious SQLi or XSS patterns.
+func InspectInputString(input string) (isMalicious bool, patternType string) {
+	if sqliRegex.MatchString(input) {
+		return true, "SQLi"
+	}
+	if xssRegex.MatchString(input) {
+		return true, "XSS"
+	}
+	return false, ""
+}
+

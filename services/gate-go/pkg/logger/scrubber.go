@@ -46,3 +46,9 @@ func ScrubMap(input map[string]interface{}) map[string]interface{} {
 	return output
 }
 
+// HasPII returns true if a string contains email patterns or secret tokens.
+func HasPII(input string) bool {
+	return emailRegex.MatchString(input) || tokenRegex.MatchString(input)
+}
+
+

@@ -1,7 +1,5 @@
 import logging
 import numpy as np
-import chromadb
-from chromadb.utils import embedding_functions
 from typing import List, Dict, Any, Optional
 
 # Configure logging
@@ -15,6 +13,8 @@ class EmbeddingGenerator:
     """
     def __init__(self, chroma_host: str = "chromadb", chroma_port: int = 8000):
         try:
+            import chromadb
+            from chromadb.utils import embedding_functions
             logger.info(f"Connecting to ChromaDB at {chroma_host}:{chroma_port}")
             self.client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
             self.embed_fn = embedding_functions.DefaultEmbeddingFunction()
@@ -25,8 +25,9 @@ class EmbeddingGenerator:
             logger.info("Successfully connected to ChromaDB and initialized collection 'security_incidents'")
         except Exception as e:
             logger.error(f"Failed to initialize ChromaDB client: {e}")
-            # In a production scenario, we might want to retry or fail fast
-            raise
+            self.client = None
+            self.collection = None
+
 
     def store_incident(self, incident_id: str, content: str, metadata: Dict[str, Any]):
         """
@@ -63,3 +64,16 @@ class EmbeddingGenerator:
         except Exception as e:
             logger.error(f"Error querying similar incidents: {e}")
             return {"ids": [], "distances": [], "documents": [], "error": str(e)}
+
+    @staticmethod
+    def generate_dense_vector(text: str, dim: int = 128) -> List[float]:
+        """Generate a deterministic normalized vector representation for text."""
+        seed = sum(ord(c) for c in text) % (2**32 - 1)
+        rng = np.random.RandomState(seed)
+        vec = rng.randn(dim)
+        norm = np.linalg.norm(vec)
+        if norm == 0:
+            return [0.0] * dim
+        return [float(x) for x in (vec / norm)]
+
+

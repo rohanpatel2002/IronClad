@@ -58,3 +58,11 @@ IRONCLAD consists of 4 microservices:
 ### `topology-go` returns a stale graph
 **Cause:** K8s API connectivity issue.
 **Fix:** The `K8sGraphBuilder` caches the graph for 5 minutes. If it cannot reach K8s during a refresh, it emits a warning log and continues serving the stale cache. Check K8s network policies and ServiceAccount RBAC.
+
+## 6. SOAR Automated Quarantine Procedures
+- When an anomalous deployment attempt (Z-score > 3.0) is blocked, the `QuarantineManager` automatically notifies OPA.
+- To manually lift a service quarantine:
+  ```bash
+  curl -X DELETE http://localhost:8181/v1/data/ironclad/blacklist/<service_name>
+  ```
+

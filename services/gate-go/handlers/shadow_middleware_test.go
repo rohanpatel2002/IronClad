@@ -84,3 +84,11 @@ func TestShadowMiddleware_ShadowsRequest(t *testing.T) {
 		t.Fatal("shadow request timed out")
 	}
 }
+
+func TestIsShadowModeEnabled(t *testing.T) {
+	t.Setenv("SHADOW_URL", "http://shadow:8080")
+	if !handlers.IsShadowModeEnabled() {
+		t.Errorf("expected true when SHADOW_URL is set")
+	}
+}
+

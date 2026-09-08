@@ -69,3 +69,10 @@ func (c *DynamicConfig) IsMaintenanceMode() bool {
 	return c.Maintenance
 }
 
+func (c *DynamicConfig) SetRiskThreshold(val float64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.RiskThreshold = val
+}
+
+

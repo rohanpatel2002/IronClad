@@ -3,6 +3,9 @@ kind: NetworkPolicy
 metadata:
   name: gate-policy
   namespace: ironclad
+  labels:
+    tier: security-zero-trust
+
 spec:
   podSelector:
     matchLabels:

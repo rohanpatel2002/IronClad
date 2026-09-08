@@ -54,3 +54,9 @@ func ShadowMiddleware() gin.HandlerFunc {
 	}
 }
 
+// IsShadowModeEnabled returns true if SHADOW_URL environment variable is configured.
+func IsShadowModeEnabled() bool {
+	return os.Getenv("SHADOW_URL") != ""
+}
+
+

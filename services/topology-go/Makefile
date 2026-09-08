@@ -18,4 +18,8 @@ fmt:
 lint:
 	go vet ./...
 
+bench:
+	go test -bench=. -benchmem ./graph/...
+
 all: fmt lint test build
+

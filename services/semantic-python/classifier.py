@@ -139,3 +139,8 @@ Classify the intent."""
             return res.content[0].text
         except:
             return "Deep reasoning currently unavailable, using baseline security profile."
+
+    def batch_classify(self, requests: List[IntentClassificationRequest]) -> List[IntentClassificationResponse]:
+        """Process a list of classification requests sequentially or via fallback."""
+        return [self.classify(r) for r in requests]
+

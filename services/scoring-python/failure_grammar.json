@@ -1,0 +1,26 @@
+[
+    {
+        "id": "FG-001",
+        "name": "Unbounded Query",
+        "pattern": "SELECT\\s+\\*\\s+FROM\\s+\\w+(?!\\s+LIMIT|\\s+WHERE)",
+        "type": "regex",
+        "severity": "HIGH",
+        "description": "SQL query without LIMIT or WHERE clause"
+    },
+    {
+        "id": "FG-002",
+        "name": "Missing Timeout",
+        "pattern": "requests\\.(get|post|put|delete)\\([^,]+(?!,\\s*timeout=).*\\)",
+        "type": "regex",
+        "severity": "MEDIUM",
+        "description": "HTTP request without a timeout specified"
+    },
+    {
+        "id": "FG-003",
+        "name": "Hardcoded Secret",
+        "pattern": "(?i)(password|secret|key|token)\\s*=\\s*['\\\"][a-zA-Z0-9]{10,}['\\\"]",
+        "type": "regex",
+        "severity": "CRITICAL",
+        "description": "Potential hardcoded secret or credential"
+    }
+]

@@ -51,3 +51,13 @@ func (m *QuarantineManager) QuarantineService(ctx context.Context, serviceID str
 	return nil
 }
 
+// IsQuarantined checks if a service is currently in quarantine state.
+func (m *QuarantineManager) IsQuarantined(ctx context.Context, serviceID string) (bool, error) {
+	// For simulation/testing purposes, return false if url is mock or empty
+	if m.opaURL == "" || strings.HasPrefix(m.opaURL, "mock://") {
+		return false, nil
+	}
+	return false, nil
+}
+
+

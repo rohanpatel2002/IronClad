@@ -1,13 +1,37 @@
 import json
 import os
-import pika
 import logging
 import signal
 import sys
 
+class EventProcessor:
+    def __init__(self, predictor=None):
+        from scorer.ml_predictor import RiskPredictor
+        self.predictor = predictor or RiskPredictor()
+        self.processed_count = 0
+
+    def process_event_payload(self, body: str) -> dict:
+        event = json.loads(body)
+        features = [
+            event.get('lines_changed', 100),
+            event.get('complexity', 5),
+            event.get('author_trust', 0.9),
+            event.get('blast_radius', 0.5)
+        ]
+        risk_score = self.predictor.predict_risk(features)
+        self.processed_count += 1
+        return {
+            "service": event.get("service", "unknown"),
+            "risk_score": risk_score,
+            "status": "processed"
+        }
+
 def consume_events():
+    import pika
     url = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/')
     queue = 'scoring_events'
+
+
 
     params = pika.URLParameters(url)
     connection = pika.BlockingConnection(params)

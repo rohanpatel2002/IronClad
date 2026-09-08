@@ -1,6 +1,8 @@
 # IRONCLAD
 
-> **A deployment gate that understands intent, not just syntax.**
+> **A deployment gate that understands intent, not just syntax.**  
+> **Release Version:** `v1.2.0` (Production Hardened & Fully Running)
+
 
 IRONCLAD is a semantic deployment risk engine that sits in front of CI/CD promotion and answers one critical question before every release:
 
@@ -297,14 +299,15 @@ This project is licensed under the **Apache License 2.0**. See `LICENSE` for det
 
 - **SHA-256 API Key Hashing**: Key credentials stored via SHA-256 hashes with scope permission enforcement.
 - **JWT Issuer & Audience Verification**: Full claims validation with distributed Redis token revocation and in-memory fallback.
-- **HMAC Audit Logging**: Tamper-evident log signatures via HMAC-SHA256.
+- **HMAC Audit Logging & Exporters**: Tamper-evident log signatures via HMAC-SHA256 with CSV/JSON export capabilities.
 - **mTLS & Strict TLS 1.3**: Transport layer security enforcing TLS 1.3 and configurable client authentication.
 - **Threat Intel Engine**: Dynamic feed polling with exponential backoff retry and trusted CIDR whitelisting.
-- **HTTP Security Middleware**: Automatic injection of security hardening headers (`nosniff`, `DENY`, `HSTS`, `CSP`).
+- **HTTP Security Middleware & Rate Limiting**: Automatic injection of security hardening headers and per-IP rate limiting.
 
 ### Security Audit
 Run the security test suite and static code audit:
 ```bash
 make security-audit
 ```
+
 

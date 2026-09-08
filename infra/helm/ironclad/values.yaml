@@ -76,3 +76,13 @@ redis:
     resources:
       limits:
         memory: 256Mi
+
+dashboard:
+  replicaCount: 2
+  image:
+    repository: ironclad/dashboard
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 3000
+

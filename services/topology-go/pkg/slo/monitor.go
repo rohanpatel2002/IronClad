@@ -55,3 +55,26 @@ func (m *SLOMonitor) Reset() {
 	m.FailedReqs = 0
 	m.WindowStart = time.Now()
 }
+
+// ErrorBudgetRemaining returns the percentage of error budget left (0.0 to 1.0).
+func (m *SLOMonitor) ErrorBudgetRemaining() float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if m.TotalReqs == 0 {
+		return 1.0
+	}
+	allowedFailureRate := 1.0 - m.Objective
+	if allowedFailureRate <= 0 {
+		return 0.0
+	}
+	maxAllowedFailures := float64(m.TotalReqs) * allowedFailureRate
+	actualFailures := float64(m.FailedReqs)
+	
+	remaining := (maxAllowedFailures - actualFailures) / maxAllowedFailures
+	if remaining < 0 {
+		return 0.0
+	}
+	return remaining
+}
+

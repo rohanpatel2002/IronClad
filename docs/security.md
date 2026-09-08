@@ -24,12 +24,17 @@ This document outlines the core security practices, threat intelligence integrat
 - **Strict TLS 1.3**: TLS configuration enforces `MinVersion: tls.VersionTLS13` for encrypted service-to-service communication.
 - **Client Auth Options**: Supports mandatory client certificate verification (`RequireAndVerifyClientCert`).
 
-### 6. HTTP Security Headers & Middleware
+### 6. HTTP Security Headers & Rate Limiting
 - **Hardening Headers**: Middleware automatically injects `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`, and `Content-Security-Policy`.
+- **IP Rate Limiter**: Thread-safe token bucket rate limiter (`IPRateLimiter`) protecting gate endpoints against high-volume abuse.
 - **Bearer Token Middleware**: Intercepts requests, validates JWTs, and verifies revocation status before passing requests to upstream handlers.
+
+### 7. Audit Log Exporters
+- **Format Support**: `AuditExporter` formats log records to indented JSON and RFC 4180 CSV for SIEM integration and compliance archiving.
 
 ## Running Security Audits
 Execute the security test and audit suite using the repository Makefile:
 ```bash
 make security-audit
 ```
+

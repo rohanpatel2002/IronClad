@@ -19,3 +19,10 @@ allow if {
 	input.intent == "hotfix"
 	input.risk_score < 0.8
 }
+
+# Allow staging deployments if risk < 0.85
+allow if {
+	input.environment == "staging"
+	input.risk_score < 0.85
+}
+

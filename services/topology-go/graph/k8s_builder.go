@@ -103,3 +103,19 @@ func (b *K8sGraphBuilder) StartBackgroundRefresher(ctx context.Context) {
 		}
 	}()
 }
+
+// LastUpdated returns the timestamp of the last successful graph refresh.
+func (b *K8sGraphBuilder) LastUpdated() time.Time {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.lastUpdate
+}
+
+// ForceRefresh invalidates cache and triggers an immediate topology refresh.
+func (b *K8sGraphBuilder) ForceRefresh(ctx context.Context) error {
+	b.mu.Lock()
+	b.lastUpdate = time.Time{} // Force expired state
+	b.mu.Unlock()
+	return b.refresh(ctx)
+}
+

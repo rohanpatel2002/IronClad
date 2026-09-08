@@ -5,6 +5,7 @@ interface DeploymentRiskProps {
   blastRadius: number;
   reversibility: number;
   timingRisk: number;
+  confidence?: number;
   decision: 'ALLOW' | 'WARN' | 'BLOCK';
 }
 
@@ -13,19 +14,23 @@ export const RiskCard: React.FC<DeploymentRiskProps> = ({
   blastRadius,
   reversibility,
   timingRisk,
+  confidence = 0.95,
   decision,
 }) => {
   const decisionColor = {
-    'ALLOW': 'bg-green-100 text-green-800',
-    'WARN': 'bg-yellow-100 text-yellow-800',
-    'BLOCK': 'bg-red-100 text-red-800',
+    'ALLOW': 'bg-green-100 text-green-800 border-green-300',
+    'WARN': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    'BLOCK': 'bg-red-100 text-red-800 border-red-300',
   }[decision];
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md border border-gray-200">
+    <div className="p-6 bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{deploymentId}</h3>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${decisionColor}`}>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">{deploymentId}</h3>
+          <p className="text-xs text-gray-500">Confidence: {(confidence * 100).toFixed(0)}%</p>
+        </div>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium border ${decisionColor}`}>
           {decision}
         </span>
       </div>
@@ -47,3 +52,4 @@ export const RiskCard: React.FC<DeploymentRiskProps> = ({
     </div>
   );
 };
+

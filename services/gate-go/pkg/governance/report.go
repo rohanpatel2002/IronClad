@@ -122,3 +122,15 @@ func (r *ComplianceReport) ExportAsJSON() ([]byte, error) {
 	return json.MarshalIndent(r, "", "  ")
 }
 
+// GenerateISO27001Summary compiles ISO 27001 Annex A control metrics.
+func (g *ReportGenerator) GenerateISO27001Summary(ctx context.Context, start, end time.Time) (*ComplianceReport, error) {
+	rep, err := g.GenerateSOC2Summary(ctx, start, end)
+	if err != nil {
+		return nil, err
+	}
+	rep.ReportID = fmt.Sprintf("ISO27001-%d", time.Now().Unix())
+	rep.Summary = fmt.Sprintf("ISO 27001 Annex A.12.1.2 Change Management audit (%s to %s)", start.Format(time.DateOnly), end.Format(time.DateOnly))
+	return rep, nil
+}
+
+

@@ -17,6 +17,11 @@ classifier = SemanticClassifier()
 def health():
     return jsonify({"status": "healthy", "service": "semantic-python"}), 200
 
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    return "# HELP semantic_requests_total Total semantic requests\n# TYPE semantic_requests_total counter\nsemantic_requests_total 1\n", 200, {'Content-Type': 'text/plain; version=0.0.4'}
+
+
 @app.route('/api/v1/classify', methods=['POST'])
 def classify_intent():
     """

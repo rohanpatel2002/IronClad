@@ -264,3 +264,9 @@ func (c *IntelClient) IsMalicious(ip string) bool {
 	return false
 }
 
+// ForceRefreshFeeds triggers an immediate synchronous update of all threat feeds.
+func (c *IntelClient) ForceRefreshFeeds() {
+	c.refreshFeeds()
+}
+
+

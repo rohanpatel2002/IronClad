@@ -51,6 +51,13 @@ func (s *decisionStore) get(id string) (*models.DeploymentDecision, bool) {
 	return d, ok
 }
 
+func (s *decisionStore) count() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.records)
+}
+
+
 // NewDecisionHandler creates a new handler with the given service and audit logger.
 func NewDecisionHandler(
 	svc *services.DecisionService,

@@ -41,6 +41,11 @@ module "eks" {
       min_size     = 1
       max_size     = 5
       instance_types = ["t3.medium"]
+      tags = {
+        Environment = "production"
+        Project     = "ironclad"
+      }
     }
   }
 }
+

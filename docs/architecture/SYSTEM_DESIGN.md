@@ -46,6 +46,13 @@ IRONCLAD is a semantic deployment risk assessment platform designed to understan
   - Shows failure grammar patterns
   - Provides timeline and historical analysis
 
+### 6. Threat Intel & SOAR Engine
+- **Module**: `gate-go/pkg/threat` & `gate-go/pkg/soar`
+- **Responsibility**:
+  - Real-time threat feed aggregation (abuse.ch, Ipsum)
+  - Autonomous OPA policy quarantine on anomalous block events
+
+
 ## Data Model
 
 See `infra/postgres/schema.sql` for the full schema.
