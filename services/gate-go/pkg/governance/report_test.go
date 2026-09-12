@@ -19,7 +19,7 @@ func (m *mockRepo) ListByTimeRange(ctx context.Context, start, end time.Time) ([
 }
 
 func TestReportGenerator(t *testing.T) {
-	logger := audit.NewAuditLogger("secret", true)
+	logger := audit.NewAuditLogger(nil)
 	gen := NewReportGenerator(&mockRepo{}, logger)
 
 	rep, err := gen.GenerateSOC2Summary(context.Background(), time.Now().Add(-24*time.Hour), time.Now())
