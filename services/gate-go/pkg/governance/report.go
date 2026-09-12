@@ -98,7 +98,8 @@ func (g *ReportGenerator) GenerateSOC2CSV(ctx context.Context, start, end time.T
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 
-	// Header
+	// Header & metadata
+	_ = w.Write([]string{fmt.Sprintf("# IRONCLAD Compliance Audit Export - Generated: %s", time.Now().UTC().Format(time.RFC3339))})
 	_ = w.Write([]string{"ID", "Timestamp", "Service", "Author", "Intent", "Status", "Explanation"})
 
 	for _, r := range records {
