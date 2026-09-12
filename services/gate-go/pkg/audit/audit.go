@@ -72,6 +72,10 @@ func (l *AuditLogger) VerifySignature(rec LogRecord) bool {
 
 // Log persists an audit record to the database.
 func (l *AuditLogger) Log(ctx context.Context, rec LogRecord) {
+	if l == nil {
+		slog.Warn("AuditLogger is nil, skipping audit record logging")
+		return
+	}
 	rec.Signature = l.ComputeSignature(rec)
 
 	if l.db == nil {
