@@ -33,3 +33,16 @@ func TestDependencyGraph_MaxDepth(t *testing.T) {
 		t.Errorf("expected leaf node depth 0, got %d", dbDepth)
 	}
 }
+
+func TestDependencyGraph_IsolationAndRemove(t *testing.T) {
+	g := New()
+	g.AddService(ServiceNode{Name: "svc-x", Criticality: 0.5})
+	if _, ok := g.GetService("svc-x"); !ok {
+		t.Fatalf("expected svc-x to exist")
+	}
+
+	g.RemoveService("svc-x")
+	if _, ok := g.GetService("svc-x"); ok {
+		t.Fatalf("expected svc-x to be removed")
+	}
+}
