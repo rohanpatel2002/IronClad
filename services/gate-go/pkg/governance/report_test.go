@@ -39,3 +39,16 @@ func TestReportGenerator(t *testing.T) {
 		t.Errorf("expected 2 evidence records for ISO report, got %d", isoRep.EvidenceCount)
 	}
 }
+
+func TestReportGenerator_CSVExport(t *testing.T) {
+	logger := audit.NewAuditLogger(nil)
+	gen := NewReportGenerator(&mockRepo{}, logger)
+
+	csvData, err := gen.GenerateSOC2CSV(context.Background(), time.Now().Add(-24*time.Hour), time.Now())
+	if err != nil {
+		t.Fatalf("unexpected CSV error: %v", err)
+	}
+	if len(csvData) == 0 {
+		t.Errorf("expected non-empty CSV output")
+	}
+}
