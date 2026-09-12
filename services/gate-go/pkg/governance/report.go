@@ -62,9 +62,10 @@ func (g *ReportGenerator) GenerateSOC2Summary(ctx context.Context, start, end ti
 
 	var allowed, blocked int
 	for _, r := range records {
-		if r.DecisionStatus == "ALLOW" {
+		switch r.DecisionStatus {
+		case "ALLOW":
 			allowed++
-		} else if r.DecisionStatus == "BLOCK" {
+		case "BLOCK":
 			blocked++
 		}
 	}
