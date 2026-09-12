@@ -100,6 +100,13 @@ func (g *DependencyGraph) AddService(node ServiceNode) {
 	}
 }
 
+// RemoveService deletes a service node from the graph.
+func (g *DependencyGraph) RemoveService(name string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	delete(g.nodes, name)
+}
+
 // GetService returns a copy of a service node by name.
 func (g *DependencyGraph) GetService(name string) (*ServiceNode, bool) {
 	g.mu.RLock()
