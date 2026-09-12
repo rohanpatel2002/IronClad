@@ -23,8 +23,8 @@ func TestSemanticClient(t *testing.T) {
 
 	client := NewSemanticClient(ts.URL, nil)
 	resp, err := client.ClassifyIntent(context.Background(), &services.IntentRequest{
-		ServiceName: "payment-api",
-		CommitHash:  "abc123",
+		Service:    "payment-api",
+		CommitHash: "abc123",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
