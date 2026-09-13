@@ -130,6 +130,7 @@ def add_failure_grammar():
 
 if __name__ == '__main__':
     port = int(os.getenv('SCORING_PORT', '8083'))
-    debug = os.getenv('DEBUG', 'true').lower() == 'true'
+    host = os.getenv('HOST', '127.0.0.1')
+    debug = os.getenv('DEBUG', 'false').lower() == 'true'
     print(f"🧮 IRONCLAD Scoring service starting on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug)
