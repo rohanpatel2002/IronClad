@@ -72,5 +72,7 @@ def classify_intent():
 
 if __name__ == '__main__':
     port = os.getenv('SEMANTIC_PORT', '8082')
+    host = os.getenv('HOST', '127.0.0.1')
+    debug = os.getenv('DEBUG', 'false').lower() == 'true'
     print(f"🧠 IRONCLAD Semantic service starting on port {port}")
-    app.run(host='0.0.0.0', port=int(port), debug=True)
+    app.run(host=host, port=int(port), debug=debug)
