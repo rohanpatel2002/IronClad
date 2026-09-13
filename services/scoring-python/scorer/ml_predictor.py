@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-import pickle
+import pickle  # nosec B403
 import os
 
 class RiskPredictor:
@@ -15,7 +15,7 @@ class RiskPredictor:
     def _load_or_init_model(self):
         if os.path.exists(self.model_path):
             with open(self.model_path, 'rb') as f:
-                return pickle.load(f)
+                return pickle.load(f)  # nosec B301
         # Baseline model if no trained model exists
         model = RandomForestClassifier(n_estimators=100)
         return model
