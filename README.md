@@ -3,7 +3,6 @@
 > **A deployment gate that understands intent, not just syntax.**  
 > **Release Version:** `v1.2.0` (Production Hardened & Fully Running)
 
-
 IRONCLAD is a semantic deployment risk engine that sits in front of CI/CD promotion and answers one critical question before every release:
 
 **“Does what this code is trying to do match what this system can safely absorb right now?”**
@@ -103,14 +102,14 @@ IRONCLAD is designed as a polyglot control-plane platform:
 
 ```text
 CI/CD System ──> IRONCLAD Gate API (Go)
-				  ├─ Diff Analyzer (Go/Python)
-				  ├─ Dependency Graph Crawler (Go)
-				  ├─ Risk Scoring Engine (Python)
-				  ├─ Failure Grammar Learner (Python)
-				  └─ Decision + Explanation
-						   │
-						   ├─ PostgreSQL (history + model metadata)
-						   └─ Dashboard API (TypeScript clients)
+      ├─ Diff Analyzer (Go/Python)
+      ├─ Dependency Graph Crawler (Go)
+      ├─ Risk Scoring Engine (Python)
+      ├─ Failure Grammar Learner (Python)
+      └─ Decision + Explanation
+         │
+         ├─ PostgreSQL (history + model metadata)
+         └─ Dashboard API (TypeScript clients)
 ```
 
 ---
@@ -118,7 +117,7 @@ CI/CD System ──> IRONCLAD Gate API (Go)
 ## Tech stack
 
 | Layer | Technology | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | Gate + Interceptors | Go | CI/CD webhook ingestion, request validation, policy enforcement |
 | Topology Engine | Go | Live dependency graph retrieval and blast radius traversal |
 | Semantic Engine | Python | Intent classification + deploy semantic interpretation |
@@ -294,7 +293,6 @@ For now:
 
 This project is licensed under the **Apache License 2.0**. See `LICENSE` for details.
 
-
 ## Security & Hardening Features
 
 - **SHA-256 API Key Hashing**: Key credentials stored via SHA-256 hashes with scope permission enforcement.
@@ -305,9 +303,9 @@ This project is licensed under the **Apache License 2.0**. See `LICENSE` for det
 - **HTTP Security Middleware & Rate Limiting**: Automatic injection of security hardening headers and per-IP rate limiting.
 
 ### Security Audit
+
 Run the security test suite and static code audit:
+
 ```bash
 make security-audit
 ```
-
-
