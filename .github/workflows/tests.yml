@@ -59,7 +59,7 @@ jobs:
       - name: Test ${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}
-          pytest -v
+          PYTHONPATH=. pytest -v
 
   typescript-tests:
     runs-on: ubuntu-latest
