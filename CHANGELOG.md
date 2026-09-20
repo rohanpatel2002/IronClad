@@ -5,6 +5,7 @@ All notable changes to the IRONCLAD security platform are documented in this fil
 ## [1.2.0] - 2026-09-06
 
 ### Added
+
 - **Topology Service**: Graph cycle detection, max depth analysis, and SLO error budget monitoring (`services/topology-go`).
 - **Scoring Engine**: ML predictor fallback with confidence bounds, failure event queue consumer, and dynamic weight configuration (`services/scoring-python`).
 - **Gate Security**: Leaky bucket & dynamic resource-aware rate limiters, SOAR quarantine engine, distributed mutex locking, and WAF input inspection (`services/gate-go`).
