@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov numpy flask scikit-learn pika pydantic
+          pip install pytest pytest-cov numpy flask scikit-learn pika pydantic python-dotenv prometheus-client anthropic
       - name: Test scoring-python
         run: cd services/scoring-python && PYTHONPATH=. pytest tests/ -v
       - name: Test semantic-python

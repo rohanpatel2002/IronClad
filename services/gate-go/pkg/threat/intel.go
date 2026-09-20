@@ -37,7 +37,7 @@ type IntelSource interface {
 
 // fetchWithRetry executes HTTP fetch requests using exponential backoff retry logic.
 func fetchWithRetry(ctx context.Context, client *http.Client, urlStr string) (*http.Response, error) {
-	res, err := retry.DoWithExponentialBackoff(ctx, 3, 200*time.Millisecond, 2*time.Second, func() (interface{}, error) {
+	res, err := retry.DoWithExponentialBackoff(ctx, 2, 50*time.Millisecond, 200*time.Millisecond, func() (interface{}, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 		if err != nil {
 			return nil, err
