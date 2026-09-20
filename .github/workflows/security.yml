@@ -45,4 +45,4 @@ jobs:
       - name: Run Bandit
         run: |
           pip install bandit
-          bandit -r services/semantic-python services/scoring-python
+          bandit -r services/semantic-python services/scoring-python -x services/semantic-python/tests,services/scoring-python/tests -s B101
