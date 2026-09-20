@@ -15,11 +15,14 @@ Thank you for your interest in contributing to IRONCLAD! This document outlines 
 
 1. Fork the repository to your GitHub account
 2. Clone your fork locally:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/IronClad.git
    cd IronClad
    ```
+
 3. Add upstream remote:
+
    ```bash
    git remote add upstream https://github.com/rohanpatel2002/IronClad.git
    ```
@@ -89,6 +92,7 @@ npm run dev
 ## Contribution Workflow
 
 1. **Create a feature branch**:
+
    ```bash
    git checkout -b feat/your-feature-name
    ```
@@ -96,6 +100,7 @@ npm run dev
 2. **Make your changes** and write tests
 
 3. **Run local quality checks**:
+
    ```bash
    make fmt lint test  # In each service directory
    ```
@@ -103,6 +108,7 @@ npm run dev
 4. **Commit with clear messages** (see below)
 
 5. **Push to your fork**:
+
    ```bash
    git push origin feat/your-feature-name
    ```
