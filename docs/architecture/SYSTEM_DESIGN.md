@@ -7,14 +7,16 @@ IRONCLAD is a semantic deployment risk assessment platform designed to understan
 ## System Components
 
 ### 1. Deployment Gate (Go)
+
 - **Service**: `services/gate-go`
 - **Port**: 8080
-- **Responsibility**: 
+- **Responsibility**:
   - Intercepts CI/CD promotion requests
   - Coordinates scoring and decision flow
   - Exposes decision API to CI systems
 
 ### 2. Topology Engine (Go)
+
 - **Service**: `services/topology-go`
 - **Port**: 8081
 - **Responsibility**:
@@ -23,6 +25,7 @@ IRONCLAD is a semantic deployment risk assessment platform designed to understan
   - Maintains service topology cache
 
 ### 3. Semantic Intent Classifier (Python)
+
 - **Service**: `services/semantic-python`
 - **Port**: 8082
 - **Responsibility**:
@@ -31,6 +34,7 @@ IRONCLAD is a semantic deployment risk assessment platform designed to understan
   - Uses Claude API for intent understanding
 
 ### 4. Risk Scoring Engine (Python)
+
 - **Service**: `services/scoring-python`
 - **Port**: 8083
 - **Responsibility**:
@@ -39,6 +43,7 @@ IRONCLAD is a semantic deployment risk assessment platform designed to understan
   - Generates explainable decision justifications
 
 ### 5. Dashboard (TypeScript/React)
+
 - **App**: `apps/dashboard`
 - **Port**: 3000 (dev) / 3001 (prod)
 - **Responsibility**:
@@ -47,11 +52,11 @@ IRONCLAD is a semantic deployment risk assessment platform designed to understan
   - Provides timeline and historical analysis
 
 ### 6. Threat Intel & SOAR Engine
+
 - **Module**: `gate-go/pkg/threat` & `gate-go/pkg/soar`
 - **Responsibility**:
   - Real-time threat feed aggregation (abuse.ch, Ipsum)
   - Autonomous OPA policy quarantine on anomalous block events
-
 
 ## Data Model
 
@@ -89,16 +94,19 @@ CI/CD → Promote or hold
 ## Deployment Decisions
 
 ### ALLOW
+
 - All risk axes are within acceptable bounds
 - No historical pattern match
 - Safe deployment window
 
 ### WARN
+
 - One or more risk axes elevated
 - Deployment is allowed but logged for monitoring
 - Recommendation for safer window provided
 
 ### BLOCK
+
 - Multiple risk axes in red zone
 - Strong historical pattern match with incident correlation
 - Actionable mitigation steps provided
@@ -119,6 +127,7 @@ CI/CD → Promote or hold
 ### Gate API: POST /api/v1/decision
 
 **Request**:
+
 ```json
 {
   "commit_hash": "abc123def456",
@@ -130,6 +139,7 @@ CI/CD → Promote or hold
 ```
 
 **Response**:
+
 ```json
 {
   "decision": "ALLOW|WARN|BLOCK",
@@ -156,6 +166,7 @@ cd apps/dashboard && npm run dev
 ```
 
 Access:
-- Dashboard: http://localhost:3000
-- Gate API: http://localhost:8080
+
+- Dashboard: <http://localhost:3000>
+- Gate API: <http://localhost:8080>
 - Postgres: localhost:5432
