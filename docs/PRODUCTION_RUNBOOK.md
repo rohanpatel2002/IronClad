@@ -5,6 +5,7 @@ This guide covers operational best practices, deployment, and troubleshooting fo
 ## 1. System Architecture
 
 IRONCLAD consists of 4 microservices:
+
 1. **gate-go (Port 8080):** API Gateway and webhook receiver.
 2. **topology-go (Port 8081):** Kubernetes dependency graph builder.
 3. **semantic-python (Port 8082):** LLM-based intent analysis.
@@ -13,6 +14,7 @@ IRONCLAD consists of 4 microservices:
 ## 2. Observability
 
 ### Prometheus & Grafana
+
 - **Prometheus** runs on port `9090` and scrapes metrics every 10s.
 - **Grafana** runs on port `3000` (`admin` / `ironclad`).
 - Pre-built dashboard `ironclad-prod.json` is automatically provisioned and tracks:
@@ -22,10 +24,12 @@ IRONCLAD consists of 4 microservices:
   - Decision Counters (ALLOW / WARN / BLOCK)
 
 ### Distributed Tracing
+
 - All requests entering `gate-go` are assigned an `X-Request-ID`.
 - This ID is propagated into logs using `slog` for structured JSON logging.
 
 ### Circuit Breakers
+
 - `gate-go` uses `gobreaker` to wrap downstream calls.
 - View real-time status at `GET /api/v1/circuit-breaker/status`.
 - If a circuit breaker is `open`, downstream requests fail-fast to prevent cascading failure. It automatically enters `half-open` after a timeout.
@@ -48,21 +52,25 @@ IRONCLAD consists of 4 microservices:
 ## 5. Troubleshooting & Incident Response
 
 ### `gate-go` is rejecting webhooks with 401 Unauthorized
+
 **Cause:** HMAC signature mismatch.
 **Fix:** Verify `GITHUB_WEBHOOK_SECRET` matches exactly between GitHub and the `gate-go` environment variable.
 
 ### `semantic-python` is timing out
+
 **Cause:** Anthropic API latency.
 **Fix:** `gate-go` has exponential backoff retries. If it still fails, the circuit breaker will trip and fallback logic will return a conservative risk score. Ensure `ANTHROPIC_API_KEY` is valid.
 
 ### `topology-go` returns a stale graph
+
 **Cause:** K8s API connectivity issue.
 **Fix:** The `K8sGraphBuilder` caches the graph for 5 minutes. If it cannot reach K8s during a refresh, it emits a warning log and continues serving the stale cache. Check K8s network policies and ServiceAccount RBAC.
 
 ## 6. SOAR Automated Quarantine Procedures
+
 - When an anomalous deployment attempt (Z-score > 3.0) is blocked, the `QuarantineManager` automatically notifies OPA.
 - To manually lift a service quarantine:
+
   ```bash
   curl -X DELETE http://localhost:8181/v1/data/ironclad/blacklist/<service_name>
   ```
-
