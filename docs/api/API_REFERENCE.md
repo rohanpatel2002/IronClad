@@ -17,6 +17,7 @@ All endpoints require authentication via API key (header: `X-IRONCLAD-KEY`) unle
 Request a deployment decision before promotion.
 
 **Request**:
+
 ```http
 POST /api/v1/decision
 X-IRONCLAD-KEY: your-api-key
@@ -35,6 +36,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "decision_id": "dec-uuid-v4",
@@ -62,6 +64,7 @@ Content-Type: application/json
 ```
 
 **Response** (429 Too Many Requests):
+
 ```json
 {
   "error": "rate_limit_exceeded",
@@ -74,6 +77,7 @@ Content-Type: application/json
 Retrieve details of a previous decision.
 
 **Response** (200 OK):
+
 ```json
 {
   "decision_id": "dec-uuid-v4",
@@ -92,12 +96,14 @@ Retrieve details of a previous decision.
 List recent deployments with filtering.
 
 **Query Parameters**:
+
 - `service`: (optional) Filter by service name
 - `decision`: (optional) Filter by decision (ALLOW, WARN, BLOCK)
 - `limit`: (optional) Max results (default: 20)
 - `offset`: (optional) Pagination offset (default: 0)
 
 **Response** (200 OK):
+
 ```json
 {
   "total": 150,
@@ -118,10 +124,12 @@ List recent deployments with filtering.
 Retrieve learned failure patterns.
 
 **Query Parameters**:
+
 - `min_confidence`: (optional) Minimum confidence score (0-1)
 - `service`: (optional) Filter by affected service
 
 **Response** (200 OK):
+
 ```json
 {
   "patterns": [
@@ -143,11 +151,13 @@ Retrieve learned failure patterns.
 List correlated incidents.
 
 **Query Parameters**:
+
 - `severity`: (optional) SEV1, SEV2, SEV3
 - `related_service`: (optional) Service name
 - `days`: (optional) Look back window (default: 90)
 
 **Response** (200 OK):
+
 ```json
 {
   "incidents": [
@@ -171,6 +181,7 @@ List correlated incidents.
 Update deployment policy thresholds.
 
 **Request** (requires `X-IRONCLAD-ADMIN-KEY` header):
+
 ```json
 {
   "blast_radius_threshold": 0.8,
@@ -182,6 +193,7 @@ Update deployment policy thresholds.
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "status": "updated",
@@ -194,6 +206,7 @@ Update deployment policy thresholds.
 Manually tag an incident as related to a deployment.
 
 **Request** (requires `X-IRONCLAD-ADMIN-KEY`):
+
 ```json
 {
   "incident_id": "incident-uuid",
@@ -203,6 +216,7 @@ Manually tag an incident as related to a deployment.
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "status": "correlated",
@@ -213,6 +227,7 @@ Manually tag an incident as related to a deployment.
 ## Error Responses
 
 ### 400 Bad Request
+
 ```json
 {
   "error": "invalid_request",
@@ -222,6 +237,7 @@ Manually tag an incident as related to a deployment.
 ```
 
 ### 401 Unauthorized
+
 ```json
 {
   "error": "authentication_failed",
@@ -230,6 +246,7 @@ Manually tag an incident as related to a deployment.
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "error": "not_found",
@@ -238,6 +255,7 @@ Manually tag an incident as related to a deployment.
 ```
 
 ### 500 Internal Server Error
+
 ```json
 {
   "error": "internal_error",
@@ -261,11 +279,13 @@ All endpoints (except /health) enforce rate limits:
 API keys are managed via your IRONCLAD instance dashboard.
 
 Provide in all requests:
+
 ```
 X-IRONCLAD-KEY: your-api-key-here
 ```
 
 Admin operations require:
+
 ```
 X-IRONCLAD-ADMIN-KEY: your-admin-key-here
 ```
@@ -273,4 +293,3 @@ X-IRONCLAD-ADMIN-KEY: your-admin-key-here
 ---
 
 For implementation details and SDKs, see the service directories.
-
