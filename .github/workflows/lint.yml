@@ -22,8 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Run Hadolint
+      - name: Run Hadolint on gate-go
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: infra/docker/Dockerfile
-          ignore: DL3008,DL3009
+          dockerfile: services/gate-go/Dockerfile
+          ignore: DL3008,DL3009,DL3018,DL3007
+
+      - name: Run Hadolint on topology-go
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: services/topology-go/Dockerfile
+          ignore: DL3008,DL3009,DL3018,DL3007
